@@ -1,0 +1,93 @@
+File prefix for the study site
+    model_output__site_prefix:
+
+File prefix for the model scenario
+    model_output__case_prefix:
+
+Output directory
+    model_output__out_dir: ~/deltaRCM_Output/
+
+Total number of time steps
+    model__total_timesteps: 200
+
+-------------------------------------------------------------
+    
+Length of ocean domain perpendicular to shore (meters)
+    model_grid__length: 200
+
+Width of ocean domain parallel to shore (meters)
+    model_grid__width: 500
+
+Size of grid cells (meters)
+    model_grid__cell_size: 10
+    
+Width of landmass (meters)
+    land_surface__width: 30.0
+
+Slope of landmass (m/m)
+    land_surface__slope: 0.00015
+
+-------------------------------------------------------------
+
+Maximum number of iterations for water flow
+    model__max_iteration: 3
+
+Number of water parcels per iteration
+    water__number_parcels: 200
+
+Flow velocity in inlet channel (m/s)
+    channel__flow_velocity: 1.0
+
+Width of inlet channel (meters)
+    channel__width: 50.0
+
+Depth of flow in inlet channel (meters)
+    channel__flow_depth: 5.0
+
+Sea surface elevation (meters)
+    sea_water_surface__elevation: 0.0
+    
+Change of water surface elevation per timestep
+    sea_water_surface__rate_change_elevation: 0.0
+
+-------------------------------------------------------------
+
+Number of sediment parcels per iteration
+    sediment__number_parcels: 500
+
+Fraction of sediment that is bedload
+    sediment__bedload_fraction: 0.25    
+
+Sediment concentration at the inlet channel (percent)
+    sediment__influx_concentration: 0.1                            
+                                            
+-------------------------------------------------------------                                            
+                                            
+Save plots of computed bed elevation? (Yes/No)
+    model_output__opt_eta_figs: Yes
+
+Save plots of computed stage? (Yes/No)
+    model_output__opt_stage_figs: Yes
+    
+Save plots of computed depth? (Yes/No)
+    model_output__opt_depth_figs: Yes
+
+Save grids of computed bed elevation? (Yes/No)
+    model_output__opt_eta_grids: Yes
+
+Save grids of computed stage? (Yes/No)
+    model_output__opt_stage_grids: Yes
+    
+Save grids of computed depth? (Yes/No)
+    model_output__opt_depth_grids: Yes
+
+Time interval for saving plots and grids (number of timesteps)
+    model_output__opt_time_interval: 10                                            
+                                            
+                                            
+                                            
+                                            
+                                            
+                                            
+                                            
+                                            

@@ -1,0 +1,45 @@
+[
+  {
+    "id": "satzone", 
+    "required": false, 
+    "exchange_items": [
+      "land_surface_water__baseflow_volume_flux"
+    ]
+  }, 
+  {
+    "id": "evap", 
+    "required": false, 
+    "exchange_items": [
+      "land_surface_water__evaporation_volume_flux"
+    ]
+  }, 
+  {
+    "id": "snow", 
+    "required": false, 
+    "exchange_items": [
+      "snowpack__melt_volume_flux"
+    ]
+  }, 
+  {
+    "id": "ice", 
+    "required": false, 
+    "exchange_items": [
+      "glacier_ice__melt_volume_flux"
+    ]
+  }, 
+  {
+    "id": "infil", 
+    "required": false, 
+    "exchange_items": [
+      "soil_surface_water__infiltration_volume_flux"
+    ]
+  }, 
+  {
+    "id": "meteorology", 
+    "required": false, 
+    "exchange_items": [
+      "atmosphere_water__rainfall_volume_flux", 
+      "water-liquid__mass-per-volume_density"
+    ]
+  }
+]

@@ -1,0 +1,273 @@
+- key: model_output__site_prefix
+  name: ''
+  description: ''
+  value:
+    type: string
+    default: ''
+    units: ''
+- key: model_output__case_prefix
+  name: ''
+  description: ''
+  value:
+    type: string
+    default: ''
+    units: ''
+- key: model_output__out_dir
+  name: ''
+  description: ''
+  value:
+    type: string
+    default: ~/deltaRCM_Output/
+    units: ''
+- key: model__total_timesteps
+  name: ''
+  description: ''
+  value:
+    type: long
+    default: 200
+    units: ''
+- key: model_grid__length
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 200.0
+    units: ''
+- key: model_grid__width
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 500.0
+    units: ''
+- key: model_grid__cell_size
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 10.0
+    units: ''
+- key: land_surface__width
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 30.0
+    units: ''
+- key: land_surface__slope
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 0.00015
+    units: ''
+- key: model__max_iteration
+  name: ''
+  description: ''
+  value:
+    type: long
+    default: 3
+    units: ''
+- key: water__number_parcels
+  name: ''
+  description: ''
+  value:
+    type: long
+    default: 200
+    units: ''
+- key: channel__flow_velocity
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 1.0
+    units: ''
+- key: channel__width
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 50.0
+    units: ''
+- key: channel__flow_depth
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 5.0
+    units: ''
+- key: sea_water_surface__elevation
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 0.0
+    units: ''
+- key: sea_water_surface__rate_change_elevation
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 0.0
+    units: ''
+- key: sediment__number_parcels
+  name: ''
+  description: ''
+  value:
+    type: long
+    default: 500
+    units: ''
+- key: sediment__bedload_fraction
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 0.25
+    units: ''
+- key: sediment__influx_concentration
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 0.1
+    units: ''
+- key: model_output__opt_eta_figs
+  name: ''
+  description: ''
+  value:
+    type: choice
+    default: false
+    units: ''
+- key: model_output__opt_stage_figs
+  name: ''
+  description: ''
+  value:
+    type: choice
+    default: false
+    units: ''
+- key: model_output__opt_depth_figs
+  name: ''
+  description: ''
+  value:
+    type: choice
+    default: false
+    units: ''
+- key: model_output__opt_eta_grids
+  name: ''
+  description: ''
+  value:
+    type: choice
+    default: false
+    units: ''
+- key: model_output__opt_stage_grids
+  name: ''
+  description: ''
+  value:
+    type: choice
+    default: false
+    units: ''
+- key: model_output__opt_depth_grids
+  name: ''
+  description: ''
+  value:
+    type: choice
+    default: false
+    units: ''
+- key: model_output__opt_time_interval
+  name: ''
+  description: ''
+  value:
+    type: long
+    default: 10
+    units: ''
+- key: coeff__surface_smoothing
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 0.9
+    units: ''
+- key: coeff__under_relaxation__water_surface
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 0.1
+    units: ''
+- key: coeff__under_relaxation__water_flow
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 0.9
+    units: ''
+- key: coeff__iterations_smoothing_algorithm
+  name: ''
+  description: ''
+  value:
+    type: long
+    default: 5
+    units: ''
+- key: coeff__depth_dependence__water
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 1.0
+    units: ''
+- key: coeff__depth_dependence__sand
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 2.0
+    units: ''
+- key: coeff__depth_dependence__mud
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 1.0
+    units: ''
+- key: coeff__non_linear_exp_sed_flux_flow_velocity
+  name: ''
+  description: ''
+  value:
+    type: long
+    default: 3
+    units: ''
+- key: coeff__sedimentation_lag
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 1.0
+    units: ''
+- key: coeff__velocity_deposition_mud
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 0.3
+    units: ''
+- key: coeff__velocity_erosion_mud
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 1.5
+    units: ''
+- key: coeff__velocity_erosion_sand
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 1.05
+    units: ''
+- key: coeff__topographic_diffusion
+  name: ''
+  description: ''
+  value:
+    type: float
+    default: 0.1
+    units: ''
