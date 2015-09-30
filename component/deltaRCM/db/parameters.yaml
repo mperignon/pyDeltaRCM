@@ -4,398 +4,390 @@ Input 1:
   description: Component status
   value:
     type: choice
-    default: Enabled
+    default: ''
     choices:
     - Enabled
     - Disabled
     units: '-'
-- key: in_directory
-  name: Input directory
-  description: Input directory
+- key: model_output__site_prefix
+  name: Site prefix
+  description: Site prefix for output file names
   value:
     type: string
-    default: /home/csdms/models/topoflow/3.1/share/data/treynor_iowa/
+    default: ''
     units: '-'
-- key: out_directory
+- key: model_output__case_prefix
+  name: Case prefix
+  description: Case prefix for output file names
+  value:
+    type: string
+    default: ''
+    units: '-'
+- key: model_output__out_dir
   name: Output directory
   description: Output directory
   value:
     type: string
-    default: ~/CMT_Output/
+    default: ~/deltaRCM_Output/
     units: '-'
-- key: site_prefix
-  name: Site prefix
-  description: File prefix for the study site
+- key: model__total_timesteps
+  name: Total timesteps
+  description: Total number of timesteps of model run
   value:
-    type: string
-    default: Treynor
-    units: '-'
-- key: case_prefix
-  name: Case prefix
-  description: File prefix for the model scenario
-  value:
-    type: string
-    default: Case5
-    units: '-'
-- key: n_steps
-  name: Number of steps
-  description: Number of time steps
-  value:
-    type: long
-    default: '10'
+    type: int
+    default: '200'
     range:
       min: '1'
-      max: 1e7
+      max: '20000'
     units: '-'
-- key: dt
-  name: Time step
-  description: Channel process timestep
+- key: model_grid__length
+  name: Grid length
+  description: Length of model grid perpendicular to shore
   value:
     type: float
-    default: '6.00000000'
+    default: '200.0'
     range:
-      min: '0'
+      min: '10.0'
+      max: '10000.0'
+    units: meters
+- key: model_grid__width
+  name: Grid width
+  description: Width of model grid parallel to shore
+  value:
+    type: float
+    default: '500.0'
+    range:
+      min: '10.0'
+      max: '10000.0'
+    units: meters
+- key: model_grid__cell_size
+  name: Cell size
+  description: Size of cells in model grid
+  value:
+    type: float
+    default: '10.0'
+    range:
+      min: '1.0'
+      max: '500.0'
+    units: meters
+- key: land_surface__width
+  name: Land width
+  description: Width of land surface
+  value:
+    type: float
+    default: '30.0'
+    range:
+      min: '1'
+      max: '1000'
+    units: meters
+- key: land_surface__slope
+  name: Land slope
+  description: Characteristic slope of the domain
+  value:
+    type: float
+    default: '0.00015'
+    range:
+      min: '0.000001'
+      max: '0.01'
+    units: m/m
+- key: model__max_iteration
+  name: Max iterations
+  description: Maximum number of iterations of water flow routing per timestep
+  value:
+    type: int
+    default: '3'
+    range:
+      min: '1'
+      max: '50'
+    units: '-'
+- key: water__number_parcels
+  name: Number of water parcels
+  description: Number of parcels of water routed per iteration
+  value:
+    type: int
+    default: '200'
+    range:
+      min: '10'
+      max: '10000'
+    units: '-'
+- key: channel__flow_velocity
+  name: Channel flow velocity
+  description: Flow velocity in the inlet channel
+  value:
+    type: float
+    default: '1.0'
+    range:
+      min: '0.001'
+      max: '50.0'
+    units: m/s
+- key: channel__width
+  name: Channel width
+  description: Width of inlet channel
+  value:
+    type: float
+    default: '50.0'
+    range:
+      min: '1'
+      max: '1000'
+    units: meters
+- key: channel__flow_depth
+  name: Channel depth
+  description: Depth of flow in the inlet channel
+  value:
+    type: float
+    default: '5.0'
+    range:
+      min: '0.001'
+      max: '100.0'
+    units: meters
+- key: sea_water_surface__elevation
+  name: Sea level
+  description: Elevation of sea surface
+  value:
+    type: float
+    default: '0.0'
+    range:
+      min: '-100'
       max: '100'
-    units: sec
-- key: code_file
-  name: D8 flow code file
-  description: Grid of d8 flow codes in binary file (jenson 84)
+    units: meters
+- key: sea_water_surface__rate_change_elevation
+  name: Sea level change
+  description: Rate of change of sea level
   value:
-    type: string
-    default: '[site_prefix]_flow.rtg'
-    units: '-'
-- key: slope_file
-  name: D8 slope file
-  description: Grid of d8 slopes in binary file
-  value:
-    type: string
-    default: '[site_prefix]_slope.rtg'
-    units: m/m
-- key: MANNING
-  name: Manning flag
-  description: Option to use manning's n for roughness
+    type: float
+    default: '0.0'
+    range:
+      min: '0.0001'
+      max: '100'
+    units: m/timestep
+- key: sediment__number_parcels
+  name: Number of sediment parcels
+  description: Number of parcels of sediment routed per timestep
   value:
     type: int
-    default: '1'
+    default: '500'
     range:
-      min: '0'
-      max: '1'
+      min: '10'
+      max: '10000'
     units: '-'
-- key: LAW_OF_WALL
-  name: Law of Wall flag
-  description: Option to use law of wall for roughness
+- key: sediment__bedload_fraction
+  name: Bedload fraction
+  description: Fraction of sediment that is bedload
+  value:
+    type: float
+    default: '0.25'
+    range:
+      min: '0.0'
+      max: '1.0'
+    units: '-'
+- key: sediment__influx_concentration
+  name: Sediment concentration
+  description: Concentration of sediment in water inflow
+  value:
+    type: float
+    default: '0.1'
+    range:
+      min: '0.0001'
+      max: '50.0'
+    units: percent
+- key: model_output__opt_eta_figs
+  name: Save plot of eta
+  description: Option to save plots of topography (eta)
+  value:
+    type: choice
+    default: 'False'
+    choices:
+    - 'Yes'
+    - 'No'
+    units: '-'
+- key: model_output__opt_stage_figs
+  name: Save plot of stage
+  description: Option to save plots of stage
+  value:
+    type: choice
+    default: 'False'
+    choices:
+    - 'Yes'
+    - 'No'
+    units: '-'
+- key: model_output__opt_depth_figs
+  name: Save plot of depth
+  description: Option to save plots of water depth
+  value:
+    type: choice
+    default: 'False'
+    choices:
+    - 'Yes'
+    - 'No'
+    units: '-'
+- key: model_output__opt_eta_grids
+  name: Save grid of eta
+  description: Option to save grid of topography (eta)
+  value:
+    type: choice
+    default: 'False'
+    choices:
+    - 'Yes'
+    - 'No'
+    units: '-'
+- key: model_output__opt_stage_grids
+  name: Save grid of stage
+  description: Option to save grid of stage
+  value:
+    type: choice
+    default: 'False'
+    choices:
+    - 'Yes'
+    - 'No'
+    units: '-'
+- key: model_output__opt_depth_grids
+  name: Save grid of depth
+  description: Option to save grid of water depth
+  value:
+    type: choice
+    default: 'False'
+    choices:
+    - 'Yes'
+    - 'No'
+    units: '-'
+- key: model_output__opt_time_interval
+  name: Output time interval
+  description: Number of timesteps between outputs
   value:
     type: int
-    default: '0'
+    default: '10'
     range:
       min: '0'
-      max: '1'
+      max: '10000'
     units: '-'
-- key: nval_type
-  name: Manning N type
-  description: Allowed input types
-  value:
-    type: choice
-    default: Grid
-    choices:
-    - Scalar
-    - Grid
-    - Time_Series
-    - Grid_Sequence
-    units: '-'
-- key: nval
-  name: Manning N
-  description: Manning's n values
-  value:
-    type: string
-    default: '[site_prefix]_chan-n.rtg'
-    units: s/m^(1/3)
-- key: z0val_type
-  name: Roughness z0 type
-  description: Allowed input types
-  value:
-    type: choice
-    default: Grid
-    choices:
-    - Scalar
-    - Grid
-    - Time_Series
-    - Grid_Sequence
-    units: '-'
-- key: z0val
-  name: Roughness z0
-  description: Law-of-wall roughness values
-  value:
-    type: string
-    default: '[site_prefix]_chan-z0.rtg'
-    units: m
 Input 2:
-- key: width_type
-  name: Bed width type
-  description: Allowed input types
-  value:
-    type: choice
-    default: Grid
-    choices:
-    - Scalar
-    - Grid
-    - Time_Series
-    - Grid_Sequence
-    units: '-'
-- key: width
-  name: Bed width
-  description: Bottom width of trapezoid cross-section
-  value:
-    type: string
-    default: '[site_prefix]_chan-w.rtg'
-    units: m
-- key: angle_type
-  name: Bank angle type
-  description: Allowed input types
-  value:
-    type: choice
-    default: Grid
-    choices:
-    - Scalar
-    - Grid
-    - Time_Series
-    - Grid_Sequence
-    units: '-'
-- key: angle
-  name: Bank angle
-  description: Bank angle of trapezoid cross-section
-  value:
-    type: string
-    default: '[site_prefix]_chan-a.rtg'
-    units: deg
-- key: d0_type
-  name: Init. depth type
-  description: Allowed input types
-  value:
-    type: choice
-    default: Scalar
-    choices:
-    - Scalar
-    - Grid
-    - Time_Series
-    - Grid_Sequence
-    units: '-'
-- key: d0
-  name: Init. depth
-  description: Initial flow depth (if scalar, use 0.0!)
+- key: coeff__surface_smoothing
+  name: Coefficient of surface smoothing
+  description: Coefficient of surface smoothing
   value:
     type: float
-    default: '0.00000000'
+    default: '0.9'
     range:
       min: '0.0'
-      max: '0.1'
-    units: m
-- key: sinu_type
-  name: Sinuosity type
-  description: Allowed input types
-  value:
-    type: choice
-    default: Scalar
-    choices:
-    - Scalar
-    - Grid
-    - Time_Series
-    - Grid_Sequence
+      max: '1.0'
     units: '-'
-- key: sinu
-  name: Sinuosity
-  description: Absolute channel sinuosity
+- key: coeff__under_relaxation__water_surface
+  name: Coefficient of under relaxation of water surface
+  description: Coefficient of under relaxation of water surface
   value:
     type: float
-    default: '1.00000000'
+    default: '0.1'
     range:
       min: '0.0'
-      max: '3.0'
-    units: m/m
-Output 1:
-- key: save_grid_dt
-  name: Save grid timestep
-  description: Time interval between saved grids
+      max: '1.0'
+    units: '-'
+- key: coeff__under_relaxation__water_flow
+  name: Coefficient of under relaxation of water flow
+  description: Coefficient of under relaxation of water flow
   value:
     type: float
-    default: '60.00000000'
+    default: '0.9'
     range:
       min: '0.0'
-      max: 1e6
-    units: sec
-- key: SAVE_Q_GRIDS
-  name: Save Q grids toggle
-  description: Option to save computed q grids
-  value:
-    type: choice
-    default: 'Yes'
-    choices:
-    - 'Yes'
-    - 'No'
+      max: '1.0'
     units: '-'
-- key: Q_gs_file
-  name: Save Q grids file
-  description: Filename for q grid stack
+- key: coeff__iterations_smoothing_algorithm
+  name: Iterations of smoothing algorithm
+  description: Number of times to repeat the surface smoothing algorithm
   value:
-    type: string
-    default: '[case_prefix]_2D-Q.nc'
-    units: m^3/s
-- key: SAVE_U_GRIDS
-  name: Save u grids toggle
-  description: Option to save computed u grids
-  value:
-    type: choice
-    default: 'No'
-    choices:
-    - 'Yes'
-    - 'No'
+    type: int
+    default: '5'
+    range:
+      min: '0'
+      max: '20'
     units: '-'
-- key: u_gs_file
-  name: Save u grids file
-  description: Filename for u grid stack
-  value:
-    type: string
-    default: '[case_prefix]_2D-u.nc'
-    units: m/s
-- key: SAVE_D_GRIDS
-  name: Save d grids toggle
-  description: Option to save computed d grids
-  value:
-    type: choice
-    default: 'No'
-    choices:
-    - 'Yes'
-    - 'No'
-    units: '-'
-- key: d_gs_file
-  name: Save d grids file
-  description: Filename for d grid stack
-  value:
-    type: string
-    default: '[case_prefix]_2D-d.nc'
-    units: m
-- key: SAVE_F_GRIDS
-  name: Save f grids toggle
-  description: Option to save computed f grids
-  value:
-    type: choice
-    default: 'No'
-    choices:
-    - 'Yes'
-    - 'No'
-    units: '-'
-- key: f_gs_file
-  name: Save f grids file
-  description: Filename for f grid stack
-  value:
-    type: string
-    default: '[case_prefix]_2D-f.nc'
-    units: '-'
-Output 2:
-- key: save_pixels_dt
-  name: Save pixels timestep
-  description: Time interval between time series values
+- key: coeff__depth_dependence__water
+  name: Coefficient of depth dependence for water velocity
+  description: Coefficient of depth dependence for water velocity
   value:
     type: float
-    default: '60.00000000'
+    default: '1.0'
     range:
       min: '0.0'
-      max: 1e6
-    units: sec
-- key: pixel_file
-  name: Monitored pixel file
-  description: Filename for monitored pixel file
-  value:
-    type: string
-    default: '[case_prefix]_outlets.txt'
+      max: '10.0'
     units: '-'
-- key: SAVE_Q_PIXELS
-  name: Save Q pixels toggle
-  description: Option to save computed q time series
+- key: coeff__depth_dependence__sand
+  name: Coefficient of depth dependence for sand transport velocity
+  description: Coefficient of depth dependence for sand transport velocity
   value:
-    type: choice
-    default: 'Yes'
-    choices:
-    - 'Yes'
-    - 'No'
+    type: float
+    default: '2.0'
+    range:
+      min: '0.0'
+      max: '10.0'
     units: '-'
-- key: Q_ts_file
-  name: Save Q pixels file
-  description: Filename for computed q time series
+- key: coeff__depth_dependence__mud
+  name: Coefficient of depth dependence for mud transport velocity
+  description: Coefficient of depth dependence for mud transport velocity
   value:
-    type: string
-    default: '[case_prefix]_0D-Q.txt'
-    units: m^3/s
-- key: SAVE_U_PIXELS
-  name: Save u pixels toggle
-  description: Option to save computed u time series
-  value:
-    type: choice
-    default: 'No'
-    choices:
-    - 'Yes'
-    - 'No'
+    type: float
+    default: '1.0'
+    range:
+      min: '0.0'
+      max: '10.0'
     units: '-'
-- key: u_ts_file
-  name: Save u pixels file
-  description: Filename for computed u time series
+- key: coeff__non_linear_exp_sed_flux_flow_velocity
+  name: Non-linear exponent for sediment flux
+  description: Non-linear exponent for sediment flux
   value:
-    type: string
-    default: '[case_prefix]_0D-u.txt'
-    units: m/s
-- key: SAVE_D_PIXELS
-  name: Save d pixels toggle
-  description: Option to save computed d time series
-  value:
-    type: choice
-    default: 'No'
-    choices:
-    - 'Yes'
-    - 'No'
+    type: int
+    default: '3'
+    range:
+      min: '0'
+      max: '10'
     units: '-'
-- key: d_ts_file
-  name: Save d pixels file
-  description: Filename for computed d time series
+- key: coeff__sedimentation_lag
+  name: Sedimentation lag
+  description: Sedimentation lag
   value:
-    type: string
-    default: '[case_prefix]_0D-d.txt'
-    units: m
-- key: SAVE_F_PIXELS
-  name: Save f pixels toggle
-  description: Option to save computed f time series
-  value:
-    type: choice
-    default: 'No'
-    choices:
-    - 'Yes'
-    - 'No'
+    type: float
+    default: '1.0'
+    range:
+      min: '0.0'
+      max: '10.0'
     units: '-'
-- key: f_ts_file
-  name: Save f pixels file
-  description: Filename for computed f time series
+- key: coeff__velocity_deposition_mud
+  name: Coefficient of velocity of mud deposition
+  description: Coefficient of velocity of mud deposition
   value:
-    type: string
-    default: '[case_prefix]_0D-f.txt'
+    type: float
+    default: '0.3'
+    range:
+      min: '0.0'
+      max: '10.0'
     units: '-'
-About:
-- key: ModelName
-  name: Model name
-  description: Name of the model
+- key: coeff__velocity_erosion_mud
+  name: Coefficient of velocity of mud erosion
+  description: Coefficient of velocity of mud erosion
   value:
-    type: String
-    default: ChannelsKinWave
+    type: float
+    default: '1.5'
+    range:
+      min: '0.0'
+      max: '10.0'
     units: '-'
-- key: ModelAuthor
-  name: Author name
-  description: Name of the model author
+- key: coeff__velocity_erosion_sand
+  name: Coefficient of velocity of sand erosion
+  description: Coefficient of velocity of sand erosion
   value:
-    type: String
-    default: 'Scott D. Peckham '
+    type: float
+    default: '1.05'
+    range:
+      min: '0.0'
+      max: '10.0'
     units: '-'
-- key: HTML_HELP_FILE
-  name: HTML help file
-  description: Url for html help file
+- key: coeff__topographic_diffusion
+  name: Coefficient of topographic diffusion
+  description: Coefficient of topographic diffusion
   value:
-    type: String
-    default: http://csdms.colorado.edu/wiki/Model_help:TopoFlow-Channels-Kinematic_Wave
+    type: float
+    default: '0.1'
+    range:
+      min: '0.0'
+      max: '1.0'
     units: '-'
