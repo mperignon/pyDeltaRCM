@@ -1,0 +1,14 @@
+{
+  "id": "delta_rcm", 
+  "name": "deltaRCM", 
+  "class": "deltaRCM", 
+  "initialize_args": "deltaRCM.in", 
+  "time_step": 1.0, 
+  "summary": "This is the first test release of the Python version of Man Liang's reduced complexity model delta model (originally in Matlab).", 
+  "url": "", 
+  "author": "Mariela C. Perignon", 
+  "email": "perignon@colorado.edu", 
+  "version": "0.1", 
+  "doi": "", 
+  "license": "MIT License"
+}
