@@ -22,7 +22,7 @@ class deltaRCM(deltaRCM_base.Tools):
         'sediment__number_parcels': {'name':'Np_sed', 'type': 'long', 'default': 500},
         'sediment__bedload_fraction': {'name':'f_bedload', 'type': 'float', 'default': 0.25}, 
         'sediment__influx_concentration': {'name':'C0_percent', 'type': 'float', 'default': 0.1},                   
-        'model_output__opt_eta_figs': {'name':'save_eta_figs', 'type': 'choice', 'default': False},
+        'model_output__opt_eta_figs': {'name':'save_eta_figs', 'type': 'choice', 'default': True},
         'model_output__opt_stage_figs': {'name':'save_stage_figs', 'type': 'choice', 'default': False},
         'model_output__opt_depth_figs': {'name':'save_depth_figs', 'type': 'choice', 'default': False},
         'model_output__opt_eta_grids': {'name':'save_eta_grids', 'type': 'choice', 'default': False},

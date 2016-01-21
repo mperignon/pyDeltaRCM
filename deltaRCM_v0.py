@@ -11,6 +11,85 @@ import pickle
 class deltaRCM:
 
     #############################################
+    ################## __init__ #################
+    #############################################
+
+    def __init__(self):
+        '''
+        Creates an instance of the model
+
+        Sets the most commonly changed variables here
+        Calls functions to set the rest and create the domain (for cleanliness)
+        '''
+
+        self.Length = 200    # meters
+        self.Width = 500     # meters
+        self.dx = 10         # meters
+
+        self.verbose = False
+        self.plot_figs = True
+        self.save_figs = True
+        self.plot_interval = 10
+
+        self.fig_name_root = ''
+
+        self.max_time = 200
+        self.itermax = 3
+        self.Np_water = 200            # total number of water parcels
+        self.Np_sed = 500            # total number of water parcels
+        self.f_bedload = 0.25         # fraction of sediment that is bedload
+
+        self.initialize_variables()
+        self.create_domain()
+
+
+
+    #############################################
+    ################### update ##################
+    #############################################
+
+    def update(self):
+        '''
+        Run the model for one full instance
+        '''
+
+        for timestep in range(self.max_time):
+            self.run_one_timestep(timestep)
+            self.plot_data(timestep)
+            
+
+    #############################################
+    ############# run_one_timestep ##############
+    #############################################
+
+    def run_one_timestep(self, timestep):
+        '''
+        Run the time loop once
+        '''
+
+        if self.verbose: print '-'*20
+        print 'Time = ' + str(timestep) + ' of ' + str(self.max_time)
+
+
+        for iteration in range(self.itermax):
+
+            self.init_water_iteration()
+            self.run_water_iteration()
+
+            if timestep>0:
+                self.get_profiles()
+
+            self.finalize_water_iteration(timestep, iteration)
+
+        self.init_sed_timestep()
+
+        self.one_coarse_timestep()
+        self.one_fine_timestep()
+
+        self.finalize_sed_timestep()
+
+
+    #############################################
     ################### tools ###################
     #############################################
 
@@ -1015,88 +1094,6 @@ class deltaRCM:
 
         self.qs, self.Vp_dep_sand, self.Vp_dep_mud = \
                         (np.zeros_like(self.eta) for _ in xrange(3))
-
-
-
-    #############################################
-    ############# run_one_timestep ##############
-    #############################################
-
-    def run_one_timestep(self, timestep):
-        '''
-        Run the time loop once
-        '''
-
-        if self.verbose: print '-'*20
-        print 'Time = ' + str(timestep) + ' of ' + str(self.max_time)
-
-
-        for iteration in range(self.itermax):
-
-            self.init_water_iteration()
-            self.run_water_iteration()
-
-            if timestep>0:
-                self.get_profiles()
-
-            self.finalize_water_iteration(timestep, iteration)
-
-        self.init_sed_timestep()
-
-        self.one_coarse_timestep()
-        self.one_fine_timestep()
-
-        self.finalize_sed_timestep()
-
-
-
-    #############################################
-    ################### update ##################
-    #############################################
-
-    def update(self):
-        '''
-        Run the model for one full instance
-        '''
-
-        for timestep in range(self.max_time):
-            self.run_one_timestep(timestep)
-            self.plot_data(timestep)
-
-
-
-    #############################################
-    ################## __init__ #################
-    #############################################
-
-    def __init__(self):
-        '''
-        Creates an instance of the model
-
-        Sets the most commonly changed variables here
-        Calls functions to set the rest and create the domain (for cleanliness)
-        '''
-
-        self.Length = 200    # meters
-        self.Width = 500     # meters
-        self.dx = 10         # meters
-
-        self.verbose = False
-        self.plot_figs = True
-        self.save_figs = True
-        self.plot_interval = 10
-
-        self.fig_name_root = ''
-
-        self.max_time = 200
-        self.itermax = 3
-        self.Np_water = 200            # total number of water parcels
-        self.Np_sed = 500            # total number of water parcels
-        self.f_bedload = 0.25         # fraction of sediment that is bedload
-
-        self.initialize_variables()
-        self.create_domain()
-
 
 
 
