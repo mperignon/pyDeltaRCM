@@ -72,7 +72,7 @@ class deltaRCM(deltaRCM_base.Tools):
         Calls functions to set the rest and create the domain (for cleanliness)
         '''
         
-        self.verbose = False
+        self.verbose = True
         self.input_file = 'deltaRCM.in'
         
         self.create_dicts()

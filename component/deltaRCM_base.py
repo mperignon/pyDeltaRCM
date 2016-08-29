@@ -23,7 +23,7 @@ class Tools(object):
         '''
 
         if np.max(probs) == 0:
-            probs = list([1/8 for i in range(8)])
+            probs = np.array([1./8 for i in range(8)])
 
         cutoffs = np.cumsum(probs)
         idx = cutoffs.searchsorted(np.random.uniform(0, cutoffs[-1]))
@@ -41,12 +41,12 @@ class Tools(object):
         '''
 
         if not probs:
-            probs = list([1 for i in range(len(choices))])
+            probs = np.array([1 for i in range(len(choices))])
 
         cutoffs = np.cumsum(probs)
         idx = cutoffs.searchsorted(np.random.uniform(0, cutoffs[-1]))
 
-        return (0,choices[idx])
+        return choices[idx]
 
 
 
@@ -388,7 +388,7 @@ class Tools(object):
         '''
 
         dloc = (self.qxn**2 + self.qyn**2)**(0.5)
-        qwn_div = np.ones_like(self.qwn)
+        qwn_div = np.ones((self.L,self.W))
         qwn_div[dloc>0] = self.qwn[dloc>0] / dloc[dloc>0]
         self.qxn *= qwn_div
         self.qyn *= qwn_div
@@ -441,7 +441,7 @@ class Tools(object):
         self.qxn[:] = 0; self.qyn[:] = 0; self.qwn[:] = 0
 
         self.indices = np.zeros((self.Np_water, self.itmax/2), dtype = np.int)
-        self.path_number = np.array(range(self.Np_water))
+        self.path_number = np.arange(self.Np_water)
         self.save_paths = []
 
 
@@ -452,7 +452,6 @@ class Tools(object):
         '''
 
         these_indices = map(lambda x: self.random_pick_inlet(self.inlet), range(self.Np_water))
-        these_indices = map(self.flatten_indices, these_indices)
 
         self.indices[:,0] = these_indices
         self.qxn.flat[these_indices] += 1
@@ -643,14 +642,13 @@ class Tools(object):
         if self.num_fine>0:
 
             these_indices = map(lambda x: self.random_pick_inlet(self.inlet),range(self.num_fine))
-            these_indices = map(self.flatten_indices,these_indices)
-
+            
             self.indices = np.zeros((self.num_fine,self.itmax), dtype=np.int)
             self.indices[:,0] = these_indices
 
-            path_number = np.array(range(self.num_fine))
+            path_number = np.arange(self.num_fine)
             self.Vp_res = np.zeros((self.Np_sed,)) + self.Vp_sed
-            self.qs.flat[these_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
+            self.qs.flat[these_indices] += self.Vp_res[path_number]/2./self.dt/self.dx
 
             sed_continue = True
             it = 0
@@ -663,8 +661,8 @@ class Tools(object):
                 new_indices = these_indices + self.walk_flat[ngh]
                 new_ind_type = self.cell_type.flat[new_indices]
 
-                self.qs.flat[these_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
-                self.qs.flat[new_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
+                self.qs.flat[these_indices] += self.Vp_res[path_number]/2./self.dt/self.dx
+                self.qs.flat[new_indices] += self.Vp_res[path_number]/2./self.dt/self.dx
 
 
                 these_indices = new_indices[new_ind_type >= 0]
@@ -695,7 +693,7 @@ class Tools(object):
 
                     Vp_res_ = self.sed_lag * Vp_res_ * (self.U_dep_mud**self.beta - self.uw.flat[update_ind]**self.beta) / (self.U_dep_mud**self.beta)
 
-                    self.Vp_dep = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4 * self.dx**2
+                    self.Vp_dep = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4. * self.dx**2
                     self.Vp_dep = np.array([min((Vp_res_[i],self.Vp_dep[i])) for i in range(len(self.Vp_dep))])
                     self.Vp_dep_mud.flat[update_ind] += self.Vp_dep
 
@@ -717,7 +715,7 @@ class Tools(object):
                     update_path = path_number[self.uw.flat[these_indices] > self.U_ero_mud]
 
                     Vp_res_ = self.Vp_sed * (self.uw.flat[update_ind]**self.beta - self.U_ero_mud**self.beta) / (self.U_ero_mud**self.beta)
-                    self.Vp_ero = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4 * self.dx**2
+                    self.Vp_ero = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4. * self.dx**2
                     self.Vp_ero = np.array([min((Vp_res_[i],self.Vp_ero[i])) for i in range(len(self.Vp_ero))])
 
                     self.eta.flat[update_ind] -= self.Vp_ero / self.dx**2
@@ -748,14 +746,13 @@ class Tools(object):
         if self.num_coarse>0:
 
             these_indices = map(lambda x: self.random_pick_inlet(self.inlet),range(self.num_coarse))
-            these_indices = map(self.flatten_indices,these_indices)
 
             self.indices = np.zeros((self.num_coarse,self.itmax), dtype=np.int)
             self.indices[:,0] = these_indices
 
-            path_number = np.array(range(self.num_coarse))
+            path_number = np.arange(self.num_coarse)
             self.Vp_res = np.zeros((self.Np_sed,)) + self.Vp_sed
-            self.qs.flat[these_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
+            self.qs.flat[these_indices] += self.Vp_res[path_number]/2./self.dt/self.dx
 
             sed_continue = True
             it = 0
@@ -768,8 +765,8 @@ class Tools(object):
                 new_indices = these_indices + self.walk_flat[ngh]
                 new_ind_type = self.cell_type.flat[new_indices]
 
-                self.qs.flat[these_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
-                self.qs.flat[new_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
+                self.qs.flat[these_indices] += self.Vp_res[path_number]/2./self.dt/self.dx
+                self.qs.flat[new_indices] += self.Vp_res[path_number]/2./self.dt/self.dx
 
                 these_indices = new_indices[new_ind_type >= 0]
                 path_number = path_number[new_ind_type >= 0]
@@ -791,20 +788,23 @@ class Tools(object):
 
                 qs_cap = self.qs0 * self.f_bedload/self.u0**self.beta * self.uw.flat[these_indices]**self.beta
 
+                qs_loc = self.qs.flat[these_indices]
 
-                if (self.qs.flat[these_indices] > qs_cap).any():
+                if (qs_loc > qs_cap).any():
 
-                    update_ind = these_indices[self.qs.flat[these_indices] > qs_cap]
-                    update_path = path_number[self.qs.flat[these_indices] > qs_cap]
+                    update_ind = these_indices[qs_loc > qs_cap]
+                    update_path = path_number[qs_loc > qs_cap]
                     Vp_res_ = self.Vp_res[update_path]
 
-                    self.Vp_dep = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4 * self.dx**2
-                    self.Vp_dep = np.array([min((Vp_res_[i],self.Vp_dep[i])) for i in range(len(update_ind))])
-                    eta_change = self.Vp_dep / self.dx**2
+                    self.Vp_dep = self.depth.flat[update_ind]/4.* self.dx**2
+                    self.Vp_dep = np.minimum(Vp_res_, self.Vp_dep)
+             
                     self.Vp_res[update_path] -= self.Vp_dep
-                    self.Vp_dep_sand.flat[update_ind] += self.Vp_dep
 
+                    eta_change = self.Vp_dep / self.dx**2
                     self.eta.flat[update_ind] += eta_change
+                    
+                    self.depth.flat[update_ind] = self.stage.flat[update_ind] - self.eta.flat[update_ind]
 
                     update_uw = [min(self.u_max, self.qw.flat[i]/self.depth.flat[i]) for i in update_ind]
                     self.uw.flat[update_ind] = update_uw
@@ -814,16 +814,20 @@ class Tools(object):
                     self.uy.flat[update_ind] = self.qy.flat[update_ind] * update_uwqw
 
 
-                if ((self.qs.flat[these_indices] < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)).any():
+                if ((qs_loc < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)).any():
 
-                    update_ind = these_indices[(self.qs.flat[these_indices] < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)]
-                    update_path = path_number[(self.qs.flat[these_indices] < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)]
+                    update_ind = these_indices[(qs_loc < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)]
+                    update_path = path_number[(qs_loc < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)]
 
                     Vp_res_ = self.Vp_sed * (self.uw.flat[update_ind]**self.beta - self.U_ero_sand**self.beta) / (self.U_ero_sand**self.beta)
-                    Vp_ero_ = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4 * self.dx**2
-                    self.Vp_ero = np.array([min((Vp_res_[i],Vp_ero_[i])) for i in range(len(update_ind))])
+                    
+                    
+                    Vp_ero_ = self.depth.flat[update_ind]/4. * self.dx**2
+                    self.Vp_ero = np.minimum(Vp_res_,Vp_ero_)
+                    
 
-                    self.eta.flat[update_ind] -= self.Vp_ero / self.dx**2
+                    eta_change = self.Vp_ero / self.dx**2
+                    self.eta.flat[update_ind] -= eta_change
                     self.depth.flat[update_ind] = self.stage.flat[update_ind] - self.eta.flat[update_ind]
 
 
@@ -965,7 +969,7 @@ class Tools(object):
         self.dxn_ivec = [0,-SQ05,-1,-SQ05,0,SQ05,1,SQ05]
         self.dxn_jvec = [1,SQ05,0,-SQ05,-1,-SQ05,0,SQ05]
 
-        self.walk_flat = np.array([1, -49, -50, -51, -1, 49, 50, 51])
+        self.walk_flat = np.array([1, -self.W+1, -self.W, -self.W-1, -1, self.W-1, self.W, self.W+1])
         self.walk = np.array([[0,1], [-SQ05, SQ05], [-1,0], [-SQ05,-SQ05], 
                               [0,-1], [SQ05,-SQ05], [1,0], [SQ05,SQ05]])
       
@@ -973,7 +977,7 @@ class Tools(object):
         
     def create_other_variables(self):
     
-        self.set_constants()
+        self.dx = float(self.dx)
     
         self.theta_sand = self.coeff_theta_sand * self.theta_water
         self.theta_mud = self.coeff_theta_mud * self.theta_water
@@ -982,11 +986,13 @@ class Tools(object):
         self.U_ero_sand = self.coeff_U_ero_sand * self.u0
         self.U_ero_mud = self.coeff_U_ero_mud * self.u0
     
-        self.L0 = int(round(self.L0_meters / self.dx))
+        self.L0 = max(1,int(round(self.L0_meters / self.dx)))
         self.N0 = max(3,int(round(self.N0_meters / self.dx)))
     
         self.L = int(round(self.Length/self.dx))        # num cells in x
         self.W = int(round(self.Width/self.dx))         # num cells in y
+        
+        self.set_constants()
 
         self.u_max = 2.0 * self.u0          # maximum allowed flow velocity
     
@@ -1022,6 +1028,8 @@ class Tools(object):
  
         # number of times to repeat topo diffusion
         self.N_crossdiff = int(round(self.dVs / self.V0))
+        
+ 
     
         # self.prefix
         self.prefix = self.out_dir
@@ -1041,50 +1049,59 @@ class Tools(object):
 
         x, y = np.meshgrid(np.arange(0,self.W), np.arange(0,self.L))
     
-        self.cell_type = np.zeros_like(x)
+        self.cell_type = np.zeros((self.L,self.W))
     
-        self.eta = np.zeros_like(x).astype(np.float32, copy=False)
-        self.stage = np.zeros_like(self.eta)
-        self.depth = np.zeros_like(self.eta)
+        self.eta = np.zeros((self.L,self.W)).astype(np.float32)
+        self.stage = np.zeros((self.L,self.W))
+        self.depth = np.zeros((self.L,self.W))
 
-        self.qx = np.zeros_like(self.eta)
-        self.qy = np.zeros_like(self.eta)
-        self.qxn = np.zeros_like(self.eta)
-        self.qyn = np.zeros_like(self.eta)
-        self.qwn = np.zeros_like(self.eta)
-        self.ux = np.zeros_like(self.eta)
-        self.uy = np.zeros_like(self.eta)
-        self.uw = np.zeros_like(self.eta)
+        self.qx = np.zeros((self.L,self.W))
+        self.qy = np.zeros((self.L,self.W))
+        self.qxn = np.zeros((self.L,self.W))
+        self.qyn = np.zeros((self.L,self.W))
+        self.qwn = np.zeros((self.L,self.W))
+        self.ux = np.zeros((self.L,self.W))
+        self.uy = np.zeros((self.L,self.W))
+        self.uw = np.zeros((self.L,self.W))
     
         self.wgt_flat = np.zeros((self.L*self.W,8))
 
-        self.qs = np.zeros_like(self.eta)
-        self.Vp_dep_sand = np.zeros_like(self.eta)
-        self.Vp_dep_mud = np.zeros_like(self.eta)
+        self.qs = np.zeros((self.L,self.W))
+        self.Vp_dep_sand = np.zeros((self.L,self.W))
+        self.Vp_dep_mud = np.zeros((self.L,self.W))
 
 
         ##### domain #####
-
-        self.cell_type[((y-3)**2 + (x-self.CTR)**2)**(0.5) > self.L-5] = -1     # out
-        self.cell_type[:self.L0,:]                                     = 2      # land
-    
+        
+        cell_land = 2
+        cell_channel = 1
+        cell_ocean = 0
+        cell_edge = -1
+        
+        
+        self.cell_type[:self.L0,:] = cell_land
+        
         channel_inds = int(self.CTR-round(self.N0/2))
-        self.cell_type[:self.L0,channel_inds:channel_inds+self.N0]     = 1      # channel
+        self.cell_type[:self.L0,channel_inds:channel_inds+self.N0] = cell_channel
 
-        self.stage = (self.L0-y-1) * self.dx * self.S0
-        self.stage[self.cell_type <= 0] = 0.
-        self.depth[self.cell_type <= 0] = self.h0
-        self.depth[self.cell_type == 1] = self.h0
+        self.stage = np.maximum(0,self.L0-y-1) * self.dx * self.S0
+        self.stage[self.cell_type == cell_ocean] = 0.
+        
+        self.depth[self.cell_type == cell_ocean] = self.h0
+        self.depth[self.cell_type == cell_channel] = self.h0
 
-        self.qx[self.cell_type == 1] = self.qw0
-        self.qx[self.cell_type <= 0] = self.qw0 / 5.
+        self.qx[self.cell_type == cell_channel] = self.qw0
+        self.qx[self.cell_type == cell_ocean] = self.qw0 / 5.
         self.qw = (self.qx**2 + self.qy**2)**(0.5)
 
         self.ux[self.depth>0] = self.qx[self.depth>0] / self.depth[self.depth>0]
         self.uy[self.depth>0] = self.qy[self.depth>0] / self.depth[self.depth>0]
         self.uw[self.depth>0] = self.qw[self.depth>0] / self.depth[self.depth>0]
 
-        self.cell_type[self.cell_type == 2] = -2   # reset the land cell_type to -2
+        self.cell_type[self.cell_type == cell_land] = -2   # reset the land cell_type to -2
+        self.cell_type[-1,:] = cell_edge
+        self.cell_type[:,0] = cell_edge
+        self.cell_type[:,-1] = cell_edge
     
         self.inlet = list(np.unique(np.where(self.cell_type == 1)[1]))
         self.eta = self.stage - self.depth
