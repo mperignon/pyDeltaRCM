@@ -5,7 +5,10 @@ clear all % clear all variable values
 close all % close all existing plots
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4f7904e1145039e51f30107187d0458584a6aafa
 plotnumber = 1000;
 f_bedload = 0.25;
 
@@ -25,7 +28,10 @@ u0 = 1.0; % (m/s) - characteristic flow velocity (also used as inlet channel vel
 h0 = 5; % (m) - characteristic flow depth (also used as inlet channel depth)
 S0 = 0.0003*f_bedload+0.0001*(1-f_bedload); % characteristic topographic slope
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4f7904e1145039e51f30107187d0458584a6aafa
 V0 = h0*(dx*dx); % (m^3) reference volume (the volume to fill up a cell to characteristic flow depth
 dVs = 0.1*N0^2*V0;
 

@@ -5,24 +5,24 @@ File prefix for the model scenario
     model_output__case_prefix:
 
 Output directory
-    model_output__out_dir: ~/deltaRCM_Output/
+    model_output__out_dir: deltaRCM_Output/
 
 Total number of time steps
-    model__total_timesteps: 200
+    model__total_timesteps: 10
 
 -------------------------------------------------------------
     
 Length of ocean domain perpendicular to shore (meters)
-    model_grid__length: 200
+    model_grid__length: 5000
 
 Width of ocean domain parallel to shore (meters)
-    model_grid__width: 500
+    model_grid__width: 10000
 
 Size of grid cells (meters)
-    model_grid__cell_size: 10
+    model_grid__cell_size: 100
     
 Width of landmass (meters)
-    land_surface__width: 30.0
+    land_surface__width: 300.0
 
 Slope of landmass (m/m)
     land_surface__slope: 0.00015
@@ -30,10 +30,10 @@ Slope of landmass (m/m)
 -------------------------------------------------------------
 
 Maximum number of iterations for water flow
-    model__max_iteration: 3
+    model__max_iteration: 1
 
 Number of water parcels per iteration
-    water__number_parcels: 200
+    water__number_parcels: 1000
 
 Flow velocity in inlet channel (m/s)
     channel__flow_velocity: 1.0
@@ -53,7 +53,7 @@ Change of water surface elevation per timestep
 -------------------------------------------------------------
 
 Number of sediment parcels per iteration
-    sediment__number_parcels: 500
+    sediment__number_parcels: 1000
 
 Fraction of sediment that is bedload
     sediment__bedload_fraction: 0.25    
@@ -61,28 +61,39 @@ Fraction of sediment that is bedload
 Sediment concentration at the inlet channel (percent)
     sediment__influx_concentration: 0.1                            
                                             
+-------------------------------------------------------------   
+
+Apply subsidence to basin? (Yes/No)
+    basin__opt_subsidence: Yes
+
+Maximum basin subsidence rate (meters per timestep)
+    basin__maximum_subsidence_rate: 0.000825                            
+
+Start of subsidence (timestep)
+    basin__subsidence_start_timestep: 0
+                                            
 -------------------------------------------------------------                                            
                                             
 Save plots of computed bed elevation? (Yes/No)
     model_output__opt_eta_figs: Yes
 
 Save plots of computed stage? (Yes/No)
-    model_output__opt_stage_figs: Yes
+    model_output__opt_stage_figs: No
     
 Save plots of computed depth? (Yes/No)
-    model_output__opt_depth_figs: Yes
+    model_output__opt_depth_figs: No
 
 Save grids of computed bed elevation? (Yes/No)
     model_output__opt_eta_grids: Yes
 
 Save grids of computed stage? (Yes/No)
-    model_output__opt_stage_grids: Yes
+    model_output__opt_stage_grids: No
     
 Save grids of computed depth? (Yes/No)
-    model_output__opt_depth_grids: Yes
+    model_output__opt_depth_grids: No
 
 Time interval for saving plots and grids (number of timesteps)
-    model_output__opt_time_interval: 10                                            
+    model_output__opt_time_interval: 2                                            
                                             
                                             
                                             

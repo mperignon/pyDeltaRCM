@@ -1,20 +1,19 @@
-from math import floor, sqrt
+from math import floor, sqrt, pi
 import numpy as np
 from random import shuffle
 from matplotlib import pyplot as plt
 from scipy import ndimage
 import sys, os, re, string
-import pickle
+from netCDF4 import Dataset
+import time as time_lib
+
 
 class Tools(object):
 
 
-    def flatten_indices(self, ind):
-        '''Flatten indices'''
-
-        return ind[0]*self.W + ind[1]
-
-
+    #############################################
+    ############### randomization ###############
+    #############################################
 
     def random_pick(self, probs):
         '''
@@ -23,7 +22,7 @@ class Tools(object):
         '''
 
         if np.max(probs) == 0:
-            probs = list([1/8 for i in range(8)])
+            probs = np.array([1./8 for i in range(8)])
 
         cutoffs = np.cumsum(probs)
         idx = cutoffs.searchsorted(np.random.uniform(0, cutoffs[-1]))
@@ -41,29 +40,25 @@ class Tools(object):
         '''
 
         if not probs:
-            probs = list([1 for i in range(len(choices))])
+            probs = np.array([1 for i in range(len(choices))])
 
         cutoffs = np.cumsum(probs)
         idx = cutoffs.searchsorted(np.random.uniform(0, cutoffs[-1]))
 
-        return (0,choices[idx])
+        return choices[idx]
 
 
 
-    def neighbors(self, ind):
-        '''
-        Get indices of the 8 neighbor cells clockwise from the east
-        '''
-
-        i = ind[0]; j = ind[1]
-
-        return [(i + self.dxn_iwalk[k], j + self.dxn_jwalk[k]) for k in range(8)]
 
 
+    #############################################
+    ################## output ###################
+    #############################################            
+    
 
     def save_figure(self, path, ext='png', close=True):
         '''
-        Save a figure from pyplot.
+        Save a figure.
 
         path : string
             The path (and filename without extension) to save the figure to.
@@ -78,41 +73,40 @@ class Tools(object):
         if directory == '': directory = '.'
 
         if not os.path.exists(directory):
+            if self.verbose: print 'Creating output directory'
             os.makedirs(directory)
 
         savepath = os.path.join(directory, filename)
         plt.savefig(savepath)
 
         if close: plt.close()
-
-
-
-    def plot_data(self, timestep):
-
-        if self.plot_figs and int(timestep+1) % self.plot_interval == 0:
-
-            plt.pcolor(self.eta)
-            plt.colorbar()
-            if not self.save_figs:
-                plt.show()
-            if self.save_figs:
-                self.save_figure("figs/" + self.fig_name_root + "eta" + str(timestep+1))
-
-            plt.pcolor(self.stage)
-            plt.colorbar()
-            if not self.save_figs:
-                plt.show()
-            if self.save_figs:
-                self.save_figure("figs/" + self.fig_name_root + "stage" + str(timestep+1))
-
-            plt.pcolor(self.depth)
-            plt.colorbar()
-            if not self.save_figs:
-                plt.show()
-            if self.save_figs:
-                self.save_figure("figs/" + self.fig_name_root + "depth" + str(timestep+1))
-
-
+            
+            
+    def save_grids(self, var_name, var, timestep):
+        '''
+        Save a grid into an existing netCDF file.
+        File should already be open (by init_output_grid) as self.output_netcdf
+        
+        var_name : string
+                The name of the variable to be saved
+        var : object
+                The numpy array to be saved
+        timestep : int
+                The current timestep (+1, so human readable)
+        '''
+        
+        try:
+            shape = self.output_netcdf[var_name].shape
+            self.output_netcdf[var_name][shape[0],:,:] = var
+            
+            self.output_netcdf['time'][shape[0]] = timestep
+            
+        except:
+            print 'Error: Cannot save grid to netCDF file.'
+        
+      
+      
+                  
 
     #############################################
     ############### weight arrays ###############
@@ -123,25 +117,21 @@ class Tools(object):
         Create np.array((8,L,W)) of quantity a in each of the neighbors to a cell
         '''
 
-        self.array = array
         a_shape = array.shape
 
-        self.fix_edges = fix_edges
-        self.normalize = normalize
-
-        wgt_array = np.zeros((8,a_shape[0],a_shape[1]))
+        wgt_array = np.zeros((8, a_shape[0], a_shape[1]))
         nums = range(8)
 
-        wgt_array[nums[0],:,:-1] = self.array[:,1:] # E
-        wgt_array[nums[1],1:,:-1] = self.array[:-1,1:] # NE
-        wgt_array[nums[2],1:,:] = self.array[:-1,:] # N
-        wgt_array[nums[3],1:,1:] = self.array[:-1,:-1] # NW
-        wgt_array[nums[4],:,1:] = self.array[:,:-1] # W
-        wgt_array[nums[5],:-1,1:] = self.array[1:,:-1] # SW
-        wgt_array[nums[6],:-1,:] = self.array[1:,:] # S
-        wgt_array[nums[7],:-1,:-1] = self.array[1:,1:] # SE
+        wgt_array[nums[0],:,:-1] = array[:,1:] # E
+        wgt_array[nums[1],1:,:-1] = array[:-1,1:] # NE
+        wgt_array[nums[2],1:,:] = array[:-1,:] # N
+        wgt_array[nums[3],1:,1:] = array[:-1,:-1] # NW
+        wgt_array[nums[4],:,1:] = array[:,:-1] # W
+        wgt_array[nums[5],:-1,1:] = array[1:,:-1] # SW
+        wgt_array[nums[6],:-1,:] = array[1:,:] # S
+        wgt_array[nums[7],:-1,:-1] = array[1:,1:] # SE
 
-        if self.fix_edges:
+        if fix_edges:
             wgt_array[nums[0],:,-1] = wgt_array[nums[0],:,-2]
             wgt_array[nums[1],:,-1] = wgt_array[nums[1],:,-2]
             wgt_array[nums[7],:,-1] = wgt_array[nums[7],:,-2]
@@ -155,7 +145,7 @@ class Tools(object):
             wgt_array[nums[6],-1,:] = wgt_array[nums[6],-2,:]
             wgt_array[nums[7],-1,:] = wgt_array[nums[7],-2,:]
 
-        if self.normalize:
+        if normalize:
             a_sum = np.sum(wgt_array, axis=0)
             wgt_array[:,a_sum!=0] = wgt_array[:,a_sum!=0] / a_sum[a_sum!=0]
 
@@ -165,8 +155,8 @@ class Tools(object):
 
     def get_wet_mask_nh(self):
         '''
-        Get np.array((8,L,W)) for each neighbor around a cell
-        with 1 if te neighbor is wet and 0 if dry
+        Returns np.array((8,L,W)), for each neighbor around a cell
+        with 1 if the neighbor is wet and 0 if dry
         '''
 
         wet_mask = (self.depth > self.dry_depth) * 1
@@ -200,10 +190,10 @@ class Tools(object):
 
     def get_wgt_int(self, wet_mask_nh):
         '''
-        Get np.array((8,L,W)) (qx*dxn_ivec + qy*dxn_jvec)/dist
+        Returns np.array((8,L,W)) (qx*dxn_ivec + qy*dxn_jvec)/dist
         for each neighbor around a cell
 
-        Takes an narray of the same size with 1 if wet and 0 if not
+        Takes an array of the same size with 1 if wet and 0 if dry
         '''
 
         wgt_int = (self.qx * np.array(self.dxn_ivec)[:,np.newaxis,np.newaxis] + \
@@ -224,7 +214,7 @@ class Tools(object):
 
     def get_wgt(self):
         '''
-        Get np.array((8,L,W)) of the probabilities of flow
+        Returns np.array((8,L,W)) of the probabilities of flow
         between a cell and each of its neighbors
 
         If the probabilities are zero in all directions, they will
@@ -280,9 +270,9 @@ class Tools(object):
 
         weight[weight<0] = 0.
         weight_sum = np.sum(weight,axis=0)
-        weight[:,weight_sum>0] = weight[:,weight_sum>0]/weight_sum[weight_sum>0]
+        weight[:,weight_sum>0] = weight[:,weight_sum>0] / weight_sum[weight_sum>0]
 
-        weight_f = np.zeros((self.L*self.W,8))
+        weight_f = np.zeros((self.L*self.W, 8))
 
         for i in range(8):
             weight_f[:,i] = weight[i,:,:].flatten()
@@ -369,11 +359,10 @@ class Tools(object):
 
             wgt_eta = self.build_weight_array(self.eta) - self.eta
 
-            crossflux_nb = multiplier * wgt_qs * wgt_eta
-
-            crossflux_nb = crossflux_nb * wet_mask_nh
-
+            crossflux_nb = multiplier * wgt_qs * wgt_eta * wet_mask_nh
+            
             crossflux = np.sum(crossflux_nb, axis=0)
+            
             self.eta = self.eta + crossflux
 
 
@@ -381,6 +370,23 @@ class Tools(object):
     #############################################
     ################# updaters ##################
     #############################################
+    
+    
+    def apply_subsidence(self, timestep):
+        '''
+        Apply subsidence to domain if
+        toggle_subsidence is True and
+        start_subsidence is <= timestep
+        '''
+        
+        if self.toggle_subsidence:
+        
+            if self.start_subsidence <= timestep:
+            
+                self.eta = self.eta - self.sigma
+                
+                
+    
 
     def update_flow_field(self, timestep, iteration):
         '''
@@ -388,8 +394,10 @@ class Tools(object):
         '''
 
         dloc = (self.qxn**2 + self.qyn**2)**(0.5)
-        qwn_div = np.ones_like(self.qwn)
+        
+        qwn_div = np.ones((self.L,self.W))
         qwn_div[dloc>0] = self.qwn[dloc>0] / dloc[dloc>0]
+        
         self.qxn *= qwn_div
         self.qyn *= qwn_div
 
@@ -441,7 +449,7 @@ class Tools(object):
         self.qxn[:] = 0; self.qyn[:] = 0; self.qwn[:] = 0
 
         self.indices = np.zeros((self.Np_water, self.itmax/2), dtype = np.int)
-        self.path_number = np.array(range(self.Np_water))
+        self.path_number = np.arange(self.Np_water)
         self.save_paths = []
 
 
@@ -452,7 +460,6 @@ class Tools(object):
         '''
 
         these_indices = map(lambda x: self.random_pick_inlet(self.inlet), range(self.Np_water))
-        these_indices = map(self.flatten_indices, these_indices)
 
         self.indices[:,0] = these_indices
         self.qxn.flat[these_indices] += 1
@@ -527,7 +534,10 @@ class Tools(object):
         Clean up at end of water iteration
         '''
 
+        self.apply_subsidence(timestep)
+
         self.flooding_correction()
+        
         self.stage = np.maximum(self.stage, self.H_SL)
         self.depth = np.maximum(self.stage - self.eta, 0)
 
@@ -643,14 +653,13 @@ class Tools(object):
         if self.num_fine>0:
 
             these_indices = map(lambda x: self.random_pick_inlet(self.inlet),range(self.num_fine))
-            these_indices = map(self.flatten_indices,these_indices)
-
-            self.indices = np.zeros((self.num_fine,self.itmax), dtype=np.int)
+            
+            self.indices = np.zeros((self.num_fine, self.itmax), dtype=np.int)
             self.indices[:,0] = these_indices
 
-            path_number = np.array(range(self.num_fine))
+            path_number = np.arange(self.num_fine)
             self.Vp_res = np.zeros((self.Np_sed,)) + self.Vp_sed
-            self.qs.flat[these_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
+            self.qs.flat[these_indices] += self.Vp_res[path_number]/2./self.dt/self.dx
 
             sed_continue = True
             it = 0
@@ -663,8 +672,9 @@ class Tools(object):
                 new_indices = these_indices + self.walk_flat[ngh]
                 new_ind_type = self.cell_type.flat[new_indices]
 
-                self.qs.flat[these_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
-                self.qs.flat[new_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
+                Vp_res_update = self.Vp_res[path_number]/2./self.dt/self.dx
+                self.qs.flat[these_indices] += Vp_res_update
+                self.qs.flat[new_indices] += Vp_res_update
 
 
                 these_indices = new_indices[new_ind_type >= 0]
@@ -686,38 +696,44 @@ class Tools(object):
                 it += 1
                 self.indices[path_number,it] = these_indices
 
+                UW_loc = self.uw.flat[these_indices]
+                if (UW_loc < self.U_dep_mud).any():
 
-                if (self.uw.flat[these_indices] < self.U_dep_mud).any():
+                    update_ind = these_indices[UW_loc < self.U_dep_mud]
+                    update_path = path_number[UW_loc < self.U_dep_mud]
 
-                    update_ind = these_indices[self.uw.flat[these_indices] < self.U_dep_mud]
-                    update_path = path_number[self.uw.flat[these_indices] < self.U_dep_mud]
-                    Vp_res_ = self.Vp_res[update_path]
+                    Vp_res_ = (self.sed_lag * self.Vp_res[update_path] *
+                    (self.U_dep_mud**self.beta - self.uw.flat[update_ind]**self.beta) /
+                    (self.U_dep_mud**self.beta))
 
-                    Vp_res_ = self.sed_lag * Vp_res_ * (self.U_dep_mud**self.beta - self.uw.flat[update_ind]**self.beta) / (self.U_dep_mud**self.beta)
-
-                    self.Vp_dep = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4 * self.dx**2
+                    self.Vp_dep = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4. * self.dx**2
                     self.Vp_dep = np.array([min((Vp_res_[i],self.Vp_dep[i])) for i in range(len(self.Vp_dep))])
+                    
                     self.Vp_dep_mud.flat[update_ind] += self.Vp_dep
 
                     self.Vp_res[update_path] -= self.Vp_dep
 
                     self.eta.flat[update_ind] += self.Vp_dep / self.dx**2
+                    
                     self.depth.flat[update_ind] = self.stage.flat[update_ind] - self.eta.flat[update_ind]
+                    
                     update_uw = [min(self.u_max, self.qw.flat[i]/self.depth.flat[i]) for i in update_ind]
                     self.uw.flat[update_ind] = update_uw
 
                     update_uwqw = [self.uw.flat[i]/self.qw.flat[i] if self.qw.flat[i]>0 else 0 for i in update_ind]
+                    
                     self.ux.flat[update_ind] = self.qx.flat[update_ind] * update_uwqw
                     self.uy.flat[update_ind] = self.qy.flat[update_ind] * update_uwqw
 
 
-                if (self.uw.flat[these_indices] > self.U_ero_mud).any():
 
-                    update_ind = these_indices[self.uw.flat[these_indices] > self.U_ero_mud]
-                    update_path = path_number[self.uw.flat[these_indices] > self.U_ero_mud]
+                if (UW_loc > self.U_ero_mud).any():
+
+                    update_ind = these_indices[UW_loc > self.U_ero_mud]
+                    update_path = path_number[UW_loc > self.U_ero_mud]
 
                     Vp_res_ = self.Vp_sed * (self.uw.flat[update_ind]**self.beta - self.U_ero_mud**self.beta) / (self.U_ero_mud**self.beta)
-                    self.Vp_ero = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4 * self.dx**2
+                    self.Vp_ero = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4. * self.dx**2
                     self.Vp_ero = np.array([min((Vp_res_[i],self.Vp_ero[i])) for i in range(len(self.Vp_ero))])
 
                     self.eta.flat[update_ind] -= self.Vp_ero / self.dx**2
@@ -748,14 +764,13 @@ class Tools(object):
         if self.num_coarse>0:
 
             these_indices = map(lambda x: self.random_pick_inlet(self.inlet),range(self.num_coarse))
-            these_indices = map(self.flatten_indices,these_indices)
 
             self.indices = np.zeros((self.num_coarse,self.itmax), dtype=np.int)
             self.indices[:,0] = these_indices
 
-            path_number = np.array(range(self.num_coarse))
+            path_number = np.arange(self.num_coarse)
             self.Vp_res = np.zeros((self.Np_sed,)) + self.Vp_sed
-            self.qs.flat[these_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
+            self.qs.flat[these_indices] += self.Vp_res[path_number]/2./self.dt/self.dx
 
             sed_continue = True
             it = 0
@@ -768,8 +783,8 @@ class Tools(object):
                 new_indices = these_indices + self.walk_flat[ngh]
                 new_ind_type = self.cell_type.flat[new_indices]
 
-                self.qs.flat[these_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
-                self.qs.flat[new_indices] += self.Vp_res[path_number]/2/self.dt/self.dx
+                self.qs.flat[these_indices] += self.Vp_res[path_number]/2./self.dt/self.dx
+                self.qs.flat[new_indices] += self.Vp_res[path_number]/2./self.dt/self.dx
 
                 these_indices = new_indices[new_ind_type >= 0]
                 path_number = path_number[new_ind_type >= 0]
@@ -791,20 +806,23 @@ class Tools(object):
 
                 qs_cap = self.qs0 * self.f_bedload/self.u0**self.beta * self.uw.flat[these_indices]**self.beta
 
+                qs_loc = self.qs.flat[these_indices]
 
-                if (self.qs.flat[these_indices] > qs_cap).any():
+                if (qs_loc > qs_cap).any():
 
-                    update_ind = these_indices[self.qs.flat[these_indices] > qs_cap]
-                    update_path = path_number[self.qs.flat[these_indices] > qs_cap]
+                    update_ind = these_indices[qs_loc > qs_cap]
+                    update_path = path_number[qs_loc > qs_cap]
                     Vp_res_ = self.Vp_res[update_path]
 
-                    self.Vp_dep = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4 * self.dx**2
-                    self.Vp_dep = np.array([min((Vp_res_[i],self.Vp_dep[i])) for i in range(len(update_ind))])
-                    eta_change = self.Vp_dep / self.dx**2
+                    self.Vp_dep = self.depth.flat[update_ind]/4.* self.dx**2
+                    self.Vp_dep = np.minimum(Vp_res_, self.Vp_dep)
+             
                     self.Vp_res[update_path] -= self.Vp_dep
-                    self.Vp_dep_sand.flat[update_ind] += self.Vp_dep
 
+                    eta_change = self.Vp_dep / self.dx**2
                     self.eta.flat[update_ind] += eta_change
+                    
+                    self.depth.flat[update_ind] = self.stage.flat[update_ind] - self.eta.flat[update_ind]
 
                     update_uw = [min(self.u_max, self.qw.flat[i]/self.depth.flat[i]) for i in update_ind]
                     self.uw.flat[update_ind] = update_uw
@@ -814,16 +832,20 @@ class Tools(object):
                     self.uy.flat[update_ind] = self.qy.flat[update_ind] * update_uwqw
 
 
-                if ((self.qs.flat[these_indices] < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)).any():
+                if ((qs_loc < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)).any():
 
-                    update_ind = these_indices[(self.qs.flat[these_indices] < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)]
-                    update_path = path_number[(self.qs.flat[these_indices] < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)]
+                    update_ind = these_indices[(qs_loc < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)]
+                    update_path = path_number[(qs_loc < qs_cap) * (self.uw.flat[these_indices] > self.U_ero_sand)]
 
                     Vp_res_ = self.Vp_sed * (self.uw.flat[update_ind]**self.beta - self.U_ero_sand**self.beta) / (self.U_ero_sand**self.beta)
-                    Vp_ero_ = (self.stage.flat[update_ind] - self.eta.flat[update_ind])/4 * self.dx**2
-                    self.Vp_ero = np.array([min((Vp_res_[i],Vp_ero_[i])) for i in range(len(update_ind))])
+                    
+                    
+                    Vp_ero_ = self.depth.flat[update_ind]/4. * self.dx**2
+                    self.Vp_ero = np.minimum(Vp_res_,Vp_ero_)
+                    
 
-                    self.eta.flat[update_ind] -= self.Vp_ero / self.dx**2
+                    eta_change = self.Vp_ero / self.dx**2
+                    self.eta.flat[update_ind] -= eta_change
                     self.depth.flat[update_ind] = self.stage.flat[update_ind] - self.eta.flat[update_ind]
 
 
@@ -965,15 +987,41 @@ class Tools(object):
         self.dxn_ivec = [0,-SQ05,-1,-SQ05,0,SQ05,1,SQ05]
         self.dxn_jvec = [1,SQ05,0,-SQ05,-1,-SQ05,0,SQ05]
 
-        self.walk_flat = np.array([1, -49, -50, -51, -1, 49, 50, 51])
+        self.walk_flat = np.array([1, -self.W+1, -self.W, -self.W-1, -1, self.W-1, self.W, self.W+1])
         self.walk = np.array([[0,1], [-SQ05, SQ05], [-1,0], [-SQ05,-SQ05], 
                               [0,-1], [SQ05,-SQ05], [1,0], [SQ05,SQ05]])
-      
+    
+    
+    def init_subsidence(self):
+        '''
+        Initializes patterns of subsidence if
+        toggle_subsidence is True (default False)
+        
+        Modify the equations for self.subsidence_mask and self.sigma as desired
+        '''
+    
+        if self.toggle_subsidence:
+        
+            R1 = 0.3 * self.L; R2 = 1. * self.L     # radial limits (fractions of L)
+            theta1 = -pi/3; theta2 =  pi/3.         # angular limits
+            
+            Rloc = np.sqrt((self.y - 3)**2 + (self.x - self.W / 2.)**2)
+            
+            thetaloc = np.zeros((self.L, self.W))
+            thetaloc[self.y > 3] = np.arctan((self.x[self.y > 3] - self.W / 2.) /
+                                             (self.y[self.y > 3] - 3))
+            
+            self.subsidence_mask = ((R1 <= Rloc) & (Rloc <= R2) &
+                                    (theta1 <= thetaloc) & (thetaloc <= theta2))
+            
+            self.sigma = self.subsidence_mask * self.sigma_max
+
+
       
         
     def create_other_variables(self):
     
-        self.set_constants()
+        self.dx = float(self.dx)
     
         self.theta_sand = self.coeff_theta_sand * self.theta_water
         self.theta_mud = self.coeff_theta_mud * self.theta_water
@@ -982,19 +1030,21 @@ class Tools(object):
         self.U_ero_sand = self.coeff_U_ero_sand * self.u0
         self.U_ero_mud = self.coeff_U_ero_mud * self.u0
     
-        self.L0 = int(round(self.L0_meters / self.dx))
-        self.N0 = max(3,int(round(self.N0_meters / self.dx)))
+        self.L0 = max(1, int(round(self.L0_meters / self.dx)))
+        self.N0 = max(3, int(round(self.N0_meters / self.dx)))
     
         self.L = int(round(self.Length/self.dx))        # num cells in x
         self.W = int(round(self.Width/self.dx))         # num cells in y
+        
+        self.set_constants()
 
-        self.u_max = 2.0 * self.u0          # maximum allowed flow velocity
+        self.u_max = 2.0 * self.u0              # maximum allowed flow velocity
     
-        self.C0 = self.C0_percent * 1/100                       # sediment concentration
+        self.C0 = self.C0_percent * 1/100.      # sediment concentration
 
         # (m) critial depth to switch to "dry" node
         self.dry_depth = min(0.1, 0.1*self.h0)
-        self.CTR = floor(self.W/2)
+        self.CTR = floor(self.W / 2.)
 
         self.gamma = self.g * self.S0 * self.dx / (self.u0**2)
 
@@ -1018,10 +1068,12 @@ class Tools(object):
         self.itmax = 2 * (self.L + self.W)      # max number of jumps for parcel
         self.dt = self.dVs / self.Qs0           # time step size
 
-        self.omega_flow_iter = 2 / self.itermax
+        self.omega_flow = 0.9
+        self.omega_flow_iter = 2. / self.itermax
  
         # number of times to repeat topo diffusion
         self.N_crossdiff = int(round(self.dVs / self.V0))
+ 
     
         # self.prefix
         self.prefix = self.out_dir
@@ -1039,55 +1091,127 @@ class Tools(object):
 
         ##### empty arrays #####
 
-        x, y = np.meshgrid(np.arange(0,self.W), np.arange(0,self.L))
+        self.x, self.y = np.meshgrid(np.arange(0,self.W), np.arange(0,self.L))
     
-        self.cell_type = np.zeros_like(x)
+        self.cell_type = np.zeros((self.L,self.W))
     
-        self.eta = np.zeros_like(x).astype(np.float32, copy=False)
-        self.stage = np.zeros_like(self.eta)
-        self.depth = np.zeros_like(self.eta)
+        self.eta = np.zeros((self.L,self.W)).astype(np.float32)
+        self.stage = np.zeros((self.L,self.W))
+        self.depth = np.zeros((self.L,self.W))
 
-        self.qx = np.zeros_like(self.eta)
-        self.qy = np.zeros_like(self.eta)
-        self.qxn = np.zeros_like(self.eta)
-        self.qyn = np.zeros_like(self.eta)
-        self.qwn = np.zeros_like(self.eta)
-        self.ux = np.zeros_like(self.eta)
-        self.uy = np.zeros_like(self.eta)
-        self.uw = np.zeros_like(self.eta)
+        self.qx = np.zeros((self.L,self.W))
+        self.qy = np.zeros((self.L,self.W))
+        self.qxn = np.zeros((self.L,self.W))
+        self.qyn = np.zeros((self.L,self.W))
+        self.qwn = np.zeros((self.L,self.W))
+        self.ux = np.zeros((self.L,self.W))
+        self.uy = np.zeros((self.L,self.W))
+        self.uw = np.zeros((self.L,self.W))
     
-        self.wgt_flat = np.zeros((self.L*self.W,8))
+        self.wgt_flat = np.zeros((self.L*self.W, 8))
 
-        self.qs = np.zeros_like(self.eta)
-        self.Vp_dep_sand = np.zeros_like(self.eta)
-        self.Vp_dep_mud = np.zeros_like(self.eta)
+        self.qs = np.zeros((self.L,self.W))
+        self.Vp_dep_sand = np.zeros((self.L,self.W))
+        self.Vp_dep_mud = np.zeros((self.L,self.W))
 
 
         ##### domain #####
+        cell_land = 2
+        cell_channel = 1
+        cell_ocean = 0
+        cell_edge = -1
+        
+        self.cell_type[:self.L0,:] = cell_land
+        
+        channel_inds = int(self.CTR - round(self.N0 / 2))
+        self.cell_type[:self.L0, channel_inds:channel_inds + self.N0 + 1] = cell_channel
 
-        self.cell_type[((y-3)**2 + (x-self.CTR)**2)**(0.5) > self.L-5] = -1     # out
-        self.cell_type[:self.L0,:]                                     = 2      # land
-    
-        channel_inds = int(self.CTR-round(self.N0/2))
-        self.cell_type[:self.L0,channel_inds:channel_inds+self.N0]     = 1      # channel
+        self.stage = np.maximum(0, self.L0 - self.y - 1) * self.dx * self.S0
+        self.stage[self.cell_type == cell_ocean] = 0.
+        
+        self.depth[self.cell_type == cell_ocean] = self.h0
+        self.depth[self.cell_type == cell_channel] = self.h0
 
-        self.stage = (self.L0-y-1) * self.dx * self.S0
-        self.stage[self.cell_type <= 0] = 0.
-        self.depth[self.cell_type <= 0] = self.h0
-        self.depth[self.cell_type == 1] = self.h0
-
-        self.qx[self.cell_type == 1] = self.qw0
-        self.qx[self.cell_type <= 0] = self.qw0 / 5.
+        self.qx[self.cell_type == cell_channel] = self.qw0
+        self.qx[self.cell_type == cell_ocean] = self.qw0 / 5.
         self.qw = (self.qx**2 + self.qy**2)**(0.5)
 
         self.ux[self.depth>0] = self.qx[self.depth>0] / self.depth[self.depth>0]
         self.uy[self.depth>0] = self.qy[self.depth>0] / self.depth[self.depth>0]
         self.uw[self.depth>0] = self.qw[self.depth>0] / self.depth[self.depth>0]
 
-        self.cell_type[self.cell_type == 2] = -2   # reset the land cell_type to -2
+        self.cell_type[self.cell_type == cell_land] = -2   # reset the land cell_type to -2
+        self.cell_type[-1,:] = cell_edge
+        self.cell_type[:,0] = cell_edge
+        self.cell_type[:,-1] = cell_edge
     
         self.inlet = list(np.unique(np.where(self.cell_type == 1)[1]))
         self.eta = self.stage - self.depth
+        
+        # initialize subsidence patterns
+        self.init_subsidence()
+        
+
+        
+    def init_output_grids(self):
+        '''
+        Creates a netCDF file to store grids with
+        default variables
+        
+        Overwrites an existing netcdf file with the same name
+        '''
+        
+        if self.save_eta_grids or self.save_depth_grids or self.save_stage_grids:
+        
+            if self.verbose: print 'Generating netCDF file for output grids...'
+            
+            directory = self.prefix
+            filename = 'pyDeltaRCM_output.nc'
+
+            if not os.path.exists(directory):
+                if self.verbose: print 'Creating output directory'
+                os.makedirs(directory)
+
+            file_path = os.path.join(directory, filename)
+
+            if os.path.exists(file_path):
+                if self.verbose: print '*** Replaced existing netCDF file ***'
+                os.remove(file_path)
+
+            self.output_netcdf = Dataset(file_path, 'w', format='NETCDF4_CLASSIC')
+
+            self.output_netcdf.description = 'Output grids from pyDeltaRCM'
+            self.output_netcdf.history = 'Created ' + time_lib.ctime(time_lib.time())
+            self.output_netcdf.source = 'pyDeltaRCM / CSDMS'
+
+            length = self.output_netcdf.createDimension('length', self.L)
+            width = self.output_netcdf.createDimension('width', self.W)
+            total_time = self.output_netcdf.createDimension('total_time', None)
+
+            x = self.output_netcdf.createVariable('x', np.float32, ('length','width'))
+            y = self.output_netcdf.createVariable('y', np.float32, ('length','width'))
+            time = self.output_netcdf.createVariable('time', np.int32, ('total_time',))
+
+            x.units = 'meters'
+            y.units = 'meters'
+            time.units = 'timesteps'
+
+            x[:] = self.x
+            y[:] = self.y
+                           
+            if self.save_eta_grids:
+                eta = self.output_netcdf.createVariable('eta', np.float32, ('total_time','length','width'))
+                eta.units = 'meters'
+                           
+            if self.save_stage_grids:
+                stage = self.output_netcdf.createVariable('stage', np.float32, ('total_time','length','width'))
+                stage.units = 'meters'
+                           
+            if self.save_depth_grids:
+                depth = self.output_netcdf.createVariable('depth', np.float32, ('total_time','length','width'))
+                depth.units = 'meters'
+                
+            if self.verbose: print 'Output netCDF file created.'
 
 
 
@@ -1101,7 +1225,7 @@ class Tools(object):
         '''
 
         if self.verbose: print '-'*20
-        print 'Time = ' + str(timestep) + ' of ' + str(self.n_steps)
+        print 'Time = ' + str(timestep+1) + ' of ' + str(self.n_steps)
 
 
         for iteration in range(self.itermax):
@@ -1109,8 +1233,11 @@ class Tools(object):
             self.init_water_iteration()
             self.run_water_iteration()
 
-            if timestep>0:
-                self.get_profiles()
+            ########################################
+            # Not calculating water surface profiles
+            ########################################
+#             if timestep>0:
+#                 self.get_profiles()
 
             self.finalize_water_iteration(timestep, iteration)
 
@@ -1123,27 +1250,40 @@ class Tools(object):
 
 
 
-
-
-
     def output_data(self, timestep):
 
         if int(timestep+1) % self.save_dt == 0:
-    
+            
+            ############ FIGURES #############
             if self.save_eta_figs:
                     
                 plt.pcolor(self.eta)
                 plt.colorbar()
-                self.save_figure(self.prefix + "eta" + str(timestep+1))
+                self.save_figure(self.prefix + "eta_" + str(timestep+1))
             
             if self.save_stage_figs:
                     
                 plt.pcolor(self.stage)
                 plt.colorbar()
-                self.save_figure(self.prefix + "stage" + str(timestep+1))
+                self.save_figure(self.prefix + "stage_" + str(timestep+1))
                         
             if self.save_depth_figs:
                     
                 plt.pcolor(self.depth)
                 plt.colorbar()
-                self.save_figure(self.prefix + "depth" + str(timestep+1))
+                self.save_figure(self.prefix + "depth_" + str(timestep+1))
+                
+                
+            ############ GRIDS #############
+            if self.save_eta_grids:
+                if self.verbose: print 'Saving grid: eta'
+                self.save_grids('eta', self.eta, timestep+1)
+            
+            if self.save_depth_grids:
+                if self.verbose: print 'Saving grid: depth'  
+                self.save_grids('depth', self.depth, timestep+1)
+
+            if self.save_stage_grids:
+                if self.verbose: print 'Saving grid: stage'
+                self.save_grids('stage', self.stage, timestep+1)                
+                

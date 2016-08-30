@@ -8,18 +8,18 @@ close all % close all existing plots
 plotnumber = 1000;
 f_bedload = 1;
 
-plotinterval = 10;
-totaltimestep = 200;
+plotinterval = 1;
+totaltimestep = 10;
 
 VER_MATLAB = 1; % 0-old, 1-new
-itermax = 3;
+itermax = 1;
 omega_flow_iter = 2*1/itermax;
 
-L = 20; % domain size (# of cells x-direction)
-W = 50; % domain size (# of cells y-direction)
+L = 50; % domain size (# of cells x-direction)
+W = 100; % domain size (# of cells y-direction)
 CTR = floor(W/2);
-dx = 10; % (m) not sure the effect
-N0 = 5; % number of cells accross inlet channel
+dx = 100; % (m) not sure the effect
+N0 = 4; % number of cells accross inlet channel
 u0 = 1.0; % (m/s) - characteristic flow velocity (also used as inlet channel velocity)
 h0 = 5; % (m) - characteristic flow depth (also used as inlet channel depth)
 S0 = 0.0003*f_bedload+0.0001*(1-f_bedload); % characteristic topographic slope
@@ -45,8 +45,8 @@ H_SL = 0; % sea-level elevation (downstream boundary condition)
 SLR = 0/1000*h0/dt; % sea-level rise per time step
 dry_depth = min(0.1,0.1*h0); % (m) critial depth to switch to "dry" node
 
-% gamma = 0.05;
-gamma = GRAVITY*S0*dx/u0/u0;
+gamma = 0.075;
+% gamma = GRAVITY*S0*dx/u0/u0;
 
 % parameters for random walk probability calculation
 theta_water = 1.0; % depth depedence (power of h) in routing water parcels
@@ -55,7 +55,7 @@ theta_mud = 1.0*theta_water; % depth depedence (power of h) in routing mud parce
 
 % sediment deposition/erosion related parameters
 beta = 3; % non-linear exponent of sediment flux to flow velocity
-lambda = 1.0; %f_bedload; % "sedimentation lag" - 1.0 means no lag
+lambda = 0.25; %f_bedload; % "sedimentation lag" - 1.0 means no lag
 U_dep_mud = 0.3*u0;
 U_ero_sand = 1.05*u0;
 U_ero_mud = 1.5*u0;
@@ -280,8 +280,8 @@ fignum = 0;
 counter = 0;
 
 % prepare for recording strata
-z0 = H_SL-h0*2; % bottom layer ELEVATION
-dz = 0.01*h0; % layer thickness
+z0 = H_SL-h0*3.5; % bottom layer ELEVATION
+dz = 0.005*h0; % layer thickness
 zmax = round((H_SL+SLR*totaltimestep*dt+S0*L/2*dx-z0)/dz); % max layer NUMBER
 strata0 = -1; % default value in strata as "none"
 strata = ones(L,W,zmax)*strata0; % initialize strata storage matrix
@@ -768,12 +768,12 @@ while timestep < totaltimestep
                 
             elseif U_loc > U_ero_sand && qs_loc < qs_cap
                 
-                disp('two')
                 
                 Vp_ero = Vp_sed*(U_loc^beta-U_ero_sand^beta)/U_ero_sand^beta;
                 Vp_ero = min(Vp_ero,(H(px,py)-eta(px,py))/4*(dx*dx));
                 
                 eta_change_loc = -Vp_ero/(dx*dx);
+                disp(Vp_sed)
                 eta(px,py) = eta(px,py)+eta_change_loc;
                 h(px,py) = H(px,py) - eta(px,py);
                 uw(px,py) = min(u_max,qw(px,py)/h(px,py));
@@ -1016,12 +1016,13 @@ while timestep < totaltimestep
     H_SL = H_SL+SLR*dt;
     
     if mod(timestep,plotinterval) == 0
-        figure(2)
+        figure(timestep)
         imagesc(eta)
         colormap(jet)
         axis equal
         colorbar
         title('bed elevation')
+        drawnow;
 %         handl = figure(2);
 %         saveas(handl,sprintf('figs/ETAIMG%d',plotnumber+timestep/plotinterval),'png')
         
