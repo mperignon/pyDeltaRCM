@@ -41,7 +41,10 @@ class deltaRCM(deltaRCM_base.Tools):
         'coeff__velocity_deposition_mud': {'name': 'coeff_U_dep_mud', 'type': 'float', 'default': 0.3},
         'coeff__velocity_erosion_mud': {'name': 'coeff_U_ero_mud', 'type': 'float', 'default': 1.5},
         'coeff__velocity_erosion_sand': {'name': 'coeff_U_ero_sand', 'type': 'float', 'default': 1.05},
-        'coeff__topographic_diffusion': {'name': 'alpha', 'type': 'float', 'default': 0.1}
+        'coeff__topographic_diffusion': {'name': 'alpha', 'type': 'float', 'default': 0.1},
+        'basin__opt_subsidence': {'name':'toggle_subsidence', 'type': 'choice', 'default': False},
+        'basin__maximum_subsidence_rate': {'name': 'sigma_max', 'type': 'float', 'default': 0.000825},
+        'basin__subsidence_start_timestep': {'name': 'start_subsidence', 'type': 'long', 'default': 0}
         }
 
 
@@ -81,6 +84,7 @@ class deltaRCM(deltaRCM_base.Tools):
         
         self.create_other_variables()
         self.create_domain()
+        self.init_output_grids()
 
 
 

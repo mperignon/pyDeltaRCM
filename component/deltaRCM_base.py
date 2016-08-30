@@ -1,4 +1,4 @@
-from math import floor, sqrt
+from math import floor, sqrt, pi
 import numpy as np
 from random import shuffle
 from matplotlib import pyplot as plt
@@ -9,6 +9,11 @@ import time as time_lib
 
 
 class Tools(object):
+
+
+    #############################################
+    ############### randomization ###############
+    #############################################
 
     def random_pick(self, probs):
         '''
@@ -41,7 +46,14 @@ class Tools(object):
         idx = cutoffs.searchsorted(np.random.uniform(0, cutoffs[-1]))
 
         return choices[idx]
-            
+
+
+
+
+
+    #############################################
+    ################## output ###################
+    #############################################            
     
 
     def save_figure(self, path, ext='png', close=True):
@@ -61,6 +73,7 @@ class Tools(object):
         if directory == '': directory = '.'
 
         if not os.path.exists(directory):
+            if self.verbose: print 'Creating output directory'
             os.makedirs(directory)
 
         savepath = os.path.join(directory, filename)
@@ -91,69 +104,9 @@ class Tools(object):
         except:
             print 'Error: Cannot save grid to netCDF file.'
         
-        pass
-        
-        
-        
-            
-            
-    def init_output_grids(self):
-        '''
-        Creates a netCDF file to store grids with
-        default variables
-        
-        Overwrites an existing netcdf file with the same name
-        '''
-        
-        if self.save_eta_grids or self.save_depth_grids or self.save_stage_grids:
-            
-            directory = self.prefix
-            filename = 'pyDeltaRCM_output.nc'
-
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-
-            file_path = os.path.join(directory, filename)
-
-            if os.path.exists(file_path):
-                os.remove(file_path)
-
-            self.output_netcdf = Dataset(file_path, 'w', format='NETCDF4_CLASSIC')
-
-            self.output_netcdf.description = 'Output grids from pyDeltaRCM'
-            self.output_netcdf.history = 'Created ' + time_lib.ctime(time_lib.time())
-            self.output_netcdf.source = 'pyDeltaRCM / CSDMS'
-
-            length = self.output_netcdf.createDimension('length', self.L)
-            width = self.output_netcdf.createDimension('width', self.W)
-            total_time = self.output_netcdf.createDimension('total_time', None)
-
-            x = self.output_netcdf.createVariable('x', np.float32, ('length','width'))
-            y = self.output_netcdf.createVariable('y', np.float32, ('length','width'))
-            time = self.output_netcdf.createVariable('time', np.int32, ('total_time',))
-
-            x.units = 'meters'
-            y.units = 'meters'
-            time.units = 'timesteps'
-
-            x[:] = self.x
-            y[:] = self.y
-                           
-            if self.save_eta_grids:
-                eta = self.output_netcdf.createVariable('eta', np.float32, ('total_time','length','width'))
-                eta.units = 'meters'
-                           
-            if self.save_stage_grids:
-                stage = self.output_netcdf.createVariable('stage', np.float32, ('total_time','length','width'))
-                stage.units = 'meters'
-                           
-            if self.save_depth_grids:
-                depth = self.output_netcdf.createVariable('depth', np.float32, ('total_time','length','width'))
-                depth.units = 'meters'
+      
+      
                   
-            
-
-
 
     #############################################
     ############### weight arrays ###############
@@ -417,6 +370,23 @@ class Tools(object):
     #############################################
     ################# updaters ##################
     #############################################
+    
+    
+    def apply_subsidence(self, timestep):
+        '''
+        Apply subsidence to domain if
+        toggle_subsidence is True and
+        start_subsidence is <= timestep
+        '''
+        
+        if self.toggle_subsidence:
+        
+            if self.start_subsidence <= timestep:
+            
+                self.eta = self.eta - self.sigma
+                
+                
+    
 
     def update_flow_field(self, timestep, iteration):
         '''
@@ -564,7 +534,10 @@ class Tools(object):
         Clean up at end of water iteration
         '''
 
+        self.apply_subsidence(timestep)
+
         self.flooding_correction()
+        
         self.stage = np.maximum(self.stage, self.H_SL)
         self.depth = np.maximum(self.stage - self.eta, 0)
 
@@ -1017,7 +990,33 @@ class Tools(object):
         self.walk_flat = np.array([1, -self.W+1, -self.W, -self.W-1, -1, self.W-1, self.W, self.W+1])
         self.walk = np.array([[0,1], [-SQ05, SQ05], [-1,0], [-SQ05,-SQ05], 
                               [0,-1], [SQ05,-SQ05], [1,0], [SQ05,SQ05]])
-      
+    
+    
+    def init_subsidence(self):
+        '''
+        Initializes patterns of subsidence if
+        toggle_subsidence is True (default False)
+        
+        Modify the equations for self.subsidence_mask and self.sigma as desired
+        '''
+    
+        if self.toggle_subsidence:
+        
+            R1 = 0.3 * self.L; R2 = 1. * self.L     # radial limits (fractions of L)
+            theta1 = -pi/3; theta2 =  pi/3.         # angular limits
+            
+            Rloc = np.sqrt((self.y - 3)**2 + (self.x - self.W / 2.)**2)
+            
+            thetaloc = np.zeros((self.L, self.W))
+            thetaloc[self.y > 3] = np.arctan((self.x[self.y > 3] - self.W / 2.) /
+                                             (self.y[self.y > 3] - 3))
+            
+            self.subsidence_mask = ((R1 <= Rloc) & (Rloc <= R2) &
+                                    (theta1 <= thetaloc) & (thetaloc <= theta2))
+            
+            self.sigma = self.subsidence_mask * self.sigma_max
+
+
       
         
     def create_other_variables(self):
@@ -1039,9 +1038,9 @@ class Tools(object):
         
         self.set_constants()
 
-        self.u_max = 2.0 * self.u0          # maximum allowed flow velocity
+        self.u_max = 2.0 * self.u0              # maximum allowed flow velocity
     
-        self.C0 = self.C0_percent * 1/100.                     # sediment concentration
+        self.C0 = self.C0_percent * 1/100.      # sediment concentration
 
         # (m) critial depth to switch to "dry" node
         self.dry_depth = min(0.1, 0.1*self.h0)
@@ -1074,7 +1073,6 @@ class Tools(object):
  
         # number of times to repeat topo diffusion
         self.N_crossdiff = int(round(self.dVs / self.V0))
-        
  
     
         # self.prefix
@@ -1149,6 +1147,71 @@ class Tools(object):
     
         self.inlet = list(np.unique(np.where(self.cell_type == 1)[1]))
         self.eta = self.stage - self.depth
+        
+        # initialize subsidence patterns
+        self.init_subsidence()
+        
+
+        
+    def init_output_grids(self):
+        '''
+        Creates a netCDF file to store grids with
+        default variables
+        
+        Overwrites an existing netcdf file with the same name
+        '''
+        
+        if self.save_eta_grids or self.save_depth_grids or self.save_stage_grids:
+        
+            if self.verbose: print 'Generating netCDF file for output grids...'
+            
+            directory = self.prefix
+            filename = 'pyDeltaRCM_output.nc'
+
+            if not os.path.exists(directory):
+                if self.verbose: print 'Creating output directory'
+                os.makedirs(directory)
+
+            file_path = os.path.join(directory, filename)
+
+            if os.path.exists(file_path):
+                if self.verbose: print '*** Replaced existing netCDF file ***'
+                os.remove(file_path)
+
+            self.output_netcdf = Dataset(file_path, 'w', format='NETCDF4_CLASSIC')
+
+            self.output_netcdf.description = 'Output grids from pyDeltaRCM'
+            self.output_netcdf.history = 'Created ' + time_lib.ctime(time_lib.time())
+            self.output_netcdf.source = 'pyDeltaRCM / CSDMS'
+
+            length = self.output_netcdf.createDimension('length', self.L)
+            width = self.output_netcdf.createDimension('width', self.W)
+            total_time = self.output_netcdf.createDimension('total_time', None)
+
+            x = self.output_netcdf.createVariable('x', np.float32, ('length','width'))
+            y = self.output_netcdf.createVariable('y', np.float32, ('length','width'))
+            time = self.output_netcdf.createVariable('time', np.int32, ('total_time',))
+
+            x.units = 'meters'
+            y.units = 'meters'
+            time.units = 'timesteps'
+
+            x[:] = self.x
+            y[:] = self.y
+                           
+            if self.save_eta_grids:
+                eta = self.output_netcdf.createVariable('eta', np.float32, ('total_time','length','width'))
+                eta.units = 'meters'
+                           
+            if self.save_stage_grids:
+                stage = self.output_netcdf.createVariable('stage', np.float32, ('total_time','length','width'))
+                stage.units = 'meters'
+                           
+            if self.save_depth_grids:
+                depth = self.output_netcdf.createVariable('depth', np.float32, ('total_time','length','width'))
+                depth.units = 'meters'
+                
+            if self.verbose: print 'Output netCDF file created.'
 
 
 
@@ -1213,6 +1276,14 @@ class Tools(object):
                 
             ############ GRIDS #############
             if self.save_eta_grids:
+                if self.verbose: print 'Saving grid: eta'
                 self.save_grids('eta', self.eta, timestep+1)
-                
+            
+            if self.save_depth_grids:
+                if self.verbose: print 'Saving grid: depth'  
+                self.save_grids('depth', self.depth, timestep+1)
+
+            if self.save_stage_grids:
+                if self.verbose: print 'Saving grid: stage'
+                self.save_grids('stage', self.stage, timestep+1)                
                 

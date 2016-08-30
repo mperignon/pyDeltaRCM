@@ -61,25 +61,36 @@ Fraction of sediment that is bedload
 Sediment concentration at the inlet channel (percent)
     sediment__influx_concentration: 0.1                            
                                             
+-------------------------------------------------------------   
+
+Apply subsidence to basin? (Yes/No)
+    basin__opt_subsidence: Yes
+
+Maximum basin subsidence rate (meters per timestep)
+    basin__maximum_subsidence_rate: 0.000825                            
+
+Start of subsidence (timestep)
+    basin__subsidence_start_timestep: 0
+                                            
 -------------------------------------------------------------                                            
                                             
 Save plots of computed bed elevation? (Yes/No)
     model_output__opt_eta_figs: Yes
 
 Save plots of computed stage? (Yes/No)
-    model_output__opt_stage_figs: Yes
+    model_output__opt_stage_figs: No
     
 Save plots of computed depth? (Yes/No)
-    model_output__opt_depth_figs: Yes
+    model_output__opt_depth_figs: No
 
 Save grids of computed bed elevation? (Yes/No)
     model_output__opt_eta_grids: Yes
 
 Save grids of computed stage? (Yes/No)
-    model_output__opt_stage_grids: Yes
+    model_output__opt_stage_grids: No
     
 Save grids of computed depth? (Yes/No)
-    model_output__opt_depth_grids: Yes
+    model_output__opt_depth_grids: No
 
 Time interval for saving plots and grids (number of timesteps)
     model_output__opt_time_interval: 2                                            
