@@ -1,22 +1,22 @@
-% ============ DeltaRCM V.0 =========================
+% ============ DeltaRCM V.1 =========================
+% sedimentation lag: lambda = 0.25
 clc % clear the command window
 clear all % clear all variable values
 close all % close all existing plots
 
 
-
 plotnumber = 1000;
-f_bedload = 1;
+f_bedload = 0.25;
 
-plotinterval = 1;
-totaltimestep = 10;
+plotinterval = 20;
+totaltimestep = 3500;
 
 VER_MATLAB = 1; % 0-old, 1-new
 itermax = 1;
 omega_flow_iter = 2*1/itermax;
 
-L = 50; % domain size (# of cells x-direction)
-W = 100; % domain size (# of cells y-direction)
+L = 100; % domain size (# of cells x-direction)
+W = 192; % domain size (# of cells y-direction)
 CTR = floor(W/2);
 dx = 100; % (m) not sure the effect
 N0 = 4; % number of cells accross inlet channel
@@ -33,9 +33,9 @@ Qs0 = Qw0*C0; % sediment total input discharge
 dt = dVs/Qs0; % time step size
 qw0 = Qw0/N0/dx; % water unit input discharge
 qs0 = qw0*C0; % sediment unit input discharge
-Np_water = 1000; % total number of water parcels
+Np_water = 2000; % total number of water parcels
 Qp_water = Qw0/Np_water; % volume of each water parcel
-Np_sed = 1000; % total number of sediment parcels
+Np_sed = 1600; % total number of sediment parcels
 Vp_sed = dVs/Np_sed; % volume of each sediment parcel
 
 GRAVITY = 9.81;
@@ -43,10 +43,14 @@ u_max = 2.0*u0;
 hB = 1.0*h0; % (m) basin depth
 H_SL = 0; % sea-level elevation (downstream boundary condition)
 SLR = 0/1000*h0/dt; % sea-level rise per time step
-dry_depth = min(0.1,0.1*h0); % (m) critial depth to switch to "dry" node
+h_dry = min(0.1,0.1*h0); % (m) critial depth to switch to "dry" node
 
 gamma = 0.075;
 % gamma = GRAVITY*S0*dx/u0/u0;
+sigma_max = 0.025*33/1000;
+z0 = H_SL-h0*3.5; % bottom layer ELEVATION
+dz = 0.005*h0; % layer thickness
+zmax = round((H_SL+SLR*totaltimestep*dt+S0*L/2*dx-z0)/dz); % max layer NUMBER
 
 % parameters for random walk probability calculation
 theta_water = 1.0; % depth depedence (power of h) in routing water parcels
@@ -55,7 +59,7 @@ theta_mud = 1.0*theta_water; % depth depedence (power of h) in routing mud parce
 
 % sediment deposition/erosion related parameters
 beta = 3; % non-linear exponent of sediment flux to flow velocity
-lambda = 0.25; %f_bedload; % "sedimentation lag" - 1.0 means no lag
+lambda = 0.25; % "sedimentation lag" - 1.0 means no lag
 U_dep_mud = 0.3*u0;
 U_ero_sand = 1.05*u0;
 U_ero_mud = 1.5*u0;
@@ -231,22 +235,26 @@ for k=1:3
 end
 
 % ============= add subsidence pattern
-sigma = zeros(L,W);
-sigma_max = 0.0*h0/1000;
-sigma_min = -0.0*h0/1000;
-for i = L0+1:L
+regionmask = zeros(L,W);
+R1 = 30;
+R2 = 100;
+theta1 = 0;
+theta2 = pi/3;
+for i = 1:L
     for j = 1:W
-        sigma(i,j) = j/W*(sigma_max-sigma_min)+sigma_min;
+        Rloc = sqrt((i-3)^2+(j-W/2)^2);
+        if Rloc >= R1 && Rloc <= R2
+            thetaloc = atan((j-W/2)/(i-3));
+            if thetaloc >= theta1 && thetaloc <= theta2
+                regionmask(i,j) = 1;
+            end
+        end
     end
 end
-% figure
-% imagesc(sigma/h0*2000,[0,3])
-% axis equal
-% colorbar
+sigma = sigma_max*regionmask;
 
 
 % % =================== time steps =============================
-wet_flag = zeros(L,W);
 px_start = 1; % x-axis of inlet cells
 py_start = [CTR-round(N0/2)+1:CTR-round(N0/2)+N0]; % y-axis of inlet cells
 dxn_iwalk_inlet = dxn_iwalk(1); % x-component of inlet flow direction
@@ -277,12 +285,7 @@ qs = zeros(L,W);
 timestep = 0;
 fignum = 0;
 
-counter = 0;
-
 % prepare for recording strata
-z0 = H_SL-h0*3.5; % bottom layer ELEVATION
-dz = 0.005*h0; % layer thickness
-zmax = round((H_SL+SLR*totaltimestep*dt+S0*L/2*dx-z0)/dz); % max layer NUMBER
 strata0 = -1; % default value in strata as "none"
 strata = ones(L,W,zmax)*strata0; % initialize strata storage matrix
 % initialize the surface layer NUMBER
@@ -301,10 +304,7 @@ sand_frac = 0.5+zeros(L,W);
 Vp_dep_sand = zeros(L,W);
 Vp_dep_mud = zeros(L,W);
 
-% --- make plots ---
-Emax = H_SL+h0;
-Emin = -hB*1.2;
-vE = [Emin:(Emax-Emin)/25:Emax];
+% load snapshot.mat
 
 tic
 while timestep < totaltimestep
@@ -318,15 +318,6 @@ while timestep < totaltimestep
         qyn = 0*qyn;
         qwn = 0*qwn;
 
-        wet_flag = 0*wet_flag;
-        for i = 1:L
-            for j = 1:W
-                if h(i,j) >= dry_depth
-                    wet_flag(i,j) = 1;
-                end
-            end
-        end
-
         Hnew = 0*Hnew;
         sfc_visit = 0*sfc_visit;
         sfc_sum = 0*sfc_sum;
@@ -338,9 +329,9 @@ while timestep < totaltimestep
             water_continue = TRUE;
             sfccredit = TRUE;
 
-%             if mod(np,100) == 0
-%                 np
-%             end
+            if mod(np,100) == 0
+                np
+            end
 
             px = px_start;
             if VER_MATLAB == 0
@@ -377,7 +368,7 @@ while timestep < totaltimestep
                     pyn = py+dxn_jwalk(dxn(k));
                     dist = dxn_dist(dxn(k));
 
-                    if wet_flag(pxn,pyn) == 1 && wall_flag(pxn,pyn) == 0
+                    if h(pxn,pyn) >= h_dry && wall_flag(pxn,pyn) == 0
                         weight_sfc(k) = max(0,H(px,py)-H(pxn,pyn))/dist;
                         weight_int(k) = max(0,qx(px,py)*dxn_ivec(dxn(k))+qy(px,py)*dxn_jvec(dxn(k)))/dist;
                     end
@@ -398,7 +389,7 @@ while timestep < totaltimestep
                     pyn = py+dxn_jwalk(dxn(k));
                     dist = dxn_dist(dxn(k));
 
-                    if wet_flag(pxn,pyn) == 1 %&& wall_flag(pxn,pyn) == 0
+                    if h(pxn,pyn) >= h_dry %&& wall_flag(pxn,pyn) == 0
                         weight(k) = h(pxn,pyn)^theta_water*weight(k);
                     end
                 end                
@@ -431,7 +422,7 @@ while timestep < totaltimestep
                         pxn = max(1,pxn);
                     end
                     ntry = 0;
-                    while wet_flag(pxn,pyn) == 0 && ntry < 5
+                    while h(pxn,pyn) < h_dry && ntry < 5
                         ntry = ntry+1;
                         if VER_MATLAB == 0
                             pxn = px+randint(1,1,[-1,1]);
@@ -450,23 +441,20 @@ while timestep < totaltimestep
                 pxn = px+istep;
                 pyn = py+jstep;
                 dist = sqrt(istep^2+jstep^2);
-                if dist > 0
-                    
-                    counter = counter+1;
-                    qxn(px,py) = qxn(px,py)+istep/dist;
-                    qyn(px,py) = qyn(px,py)+jstep/dist;
-                    qwn(px,py) = qwn(px,py)+Qp_water/dx/2;
-                    qxn(pxn,pyn) = qxn(pxn,pyn)+istep/dist;
-                    qyn(pxn,pyn) = qyn(pxn,pyn)+jstep/dist;
-                    qwn(pxn,pyn) = qwn(pxn,pyn)+Qp_water/dx/2;
-                end
-                px = pxn;
-                py = pyn;
-                iseq(it) = px;
-                jseq(it) = py;
-                % deal with loops
-                % deal with loops
-                if prepath_flag(px,py) == TRUE && it > L0
+                if prepath_flag(pxn,pyn) == 0 % not forming a loop
+                    if dist > 0
+                        qxn(px,py) = qxn(px,py)+istep/dist;
+                        qyn(px,py) = qyn(px,py)+jstep/dist;
+                        qwn(px,py) = qwn(px,py)+Qp_water/dx/2;
+                        qxn(pxn,pyn) = qxn(pxn,pyn)+istep/dist;
+                        qyn(pxn,pyn) = qyn(pxn,pyn)+jstep/dist;
+                        qwn(pxn,pyn) = qwn(pxn,pyn)+Qp_water/dx/2;
+                    end
+                    px = pxn;
+                    py = pyn;
+                    iseq(it) = px;
+                    jseq(it) = py;
+                elseif it > L0 % parcel is looping outside of initial channel
                     sfccredit = FALSE;
                     Fx = px-1;
                     Fy = py-CTR;
@@ -486,16 +474,12 @@ while timestep < totaltimestep
                 qyn(px,py) = qyn(px,py)+jstep/dist;
                 qwn(pxn,pyn) = qwn(pxn,pyn)+Qp_water/dx/2;
             end
-            
-            % mp: the problem with setting the volume of water in a water parcel as an inverse funciton
-            % of the number of parcels is that then uw can stay very small (below 0.5*u0) for a long time
-            % and prevent the stage from updating.
 
             % =========== calculate free surface =============
             % calcuate free surface along one water parcel path
             % not update yet
             itback = itend; %size(iseq,2);
-            if boundflag(iseq(itback),jseq(itback)) == TRUE && sfccredit == TRUE
+            if  sfccredit == TRUE && boundflag(iseq(itback),jseq(itback)) == TRUE
                 Hnew(iseq(itback),jseq(itback)) = H_SL;
                 it0 = 0;
                 Ldist = 0;
@@ -539,10 +523,6 @@ while timestep < totaltimestep
             end
         end % --- end of one individual water parcel, go to next parcel
 
-        max(qxn(:))
-        max(qyn(:))
-        max(qwn(:))
-        
         % ======= all water parcels are done, update surface
         % update free surface
         Hnew = eta+h;
@@ -559,7 +539,7 @@ while timestep < totaltimestep
             Hsmth = Htemp;
             for i = 1:L
                 for j = 1:W
-                    if boundflag(i,j) ~= 1 %&& wet_flag(i,j) == 1
+                    if boundflag(i,j) ~= 1
                         sumH = 0;
                         nbcount = 0;
                         for k = 1:Nnbr(i,j)
@@ -585,22 +565,21 @@ while timestep < totaltimestep
             H = (1-omega_sfc)*H+omega_sfc*Hsmth; 
         end
 
-        %  flooding/dry-wet correction
+%         %  flooding/dry-wet correction
 %         for i = 1:L
 %             for j = 1:W
-%                 if wet_flag(i,j) == 0 % locate dry nodes
+%                 if h(i,j) < h_dry % locate dry nodes
 %                     for k = 1:Nnbr(i,j)
 %                         dxn(k) = nbr(i,j,k);
 %                         inbr = i+dxn_iwalk(dxn(k));
 %                         jnbr = j+dxn_jwalk(dxn(k));
-%                         if wet_flag(inbr,jnbr) == 1 && H(inbr,jnbr)>eta(i,j)
+%                         if h(inbr,jnbr) >= h_dry && H(inbr,jnbr)>eta(i,j)
 %                             H(i,j) = H(inbr,jnbr);
 %                         end
 %                     end
 %                 end
 %             end
 %         end
-
         h = max(0,H-eta);
 
         % ======= update flow field and velocity field ======
@@ -634,7 +613,7 @@ while timestep < totaltimestep
         % update velocity field
         for i = 1:L
             for j = 1:W
-                if h(i,j) > dry_depth && qw(i,j) > 0
+                if h(i,j) > h_dry && qw(i,j) > 0
                     uw(i,j) = min(u_max,qw(i,j)/h(i,j));
                     ux(i,j) = uw(i,j)*qx(i,j)/qw(i,j);
                     uy(i,j) = uw(i,j)*qy(i,j)/qw(i,j);
@@ -646,12 +625,9 @@ while timestep < totaltimestep
             end
         end
 
-        
     end
-    
-    
 
-%     ============== sediment transport ==============
+    % ============== sediment transport ==============
     qs = 0*qs;
     Vp_dep_sand = 0*Vp_dep_sand;
     Vp_dep_mud = 0*Vp_dep_mud;
@@ -660,9 +636,9 @@ while timestep < totaltimestep
         Vp_res = Vp_sed;
         
         itmax = 2*(L+W);
-%         if mod(np_sed,100) == 0
-%             np_sed
-%         end
+        if mod(np_sed,100) == 0
+            np_sed
+        end
         
         px = px_start;
         if VER_MATLAB == 0
@@ -694,7 +670,7 @@ while timestep < totaltimestep
                 dist = dxn_dist(dxn(k));
                 weight(k) = (max(0,qx(px,py)*dxn_ivec(dxn(k))+qy(px,py)*dxn_jvec(dxn(k))))^1.0*...
                     h(pxn,pyn)^theta_sand/dist;
-                if wet_flag(pxn,pyn) ~= 1
+                if h(pxn,pyn) < h_dry
                     weight(k) = 0; % doesn't allow dry nodes
                 end
                 if wall_flag(pxn,pyn) ~= 0
@@ -749,8 +725,6 @@ while timestep < totaltimestep
             Vp_dep = 0;
             Vp_ero = 0;
             if qs_loc > qs_cap
-                
-                
                 Vp_dep = min(Vp_res,(H(px,py)-eta(px,py))/4*(dx*dx));
                 
                 eta_change_loc = Vp_dep/(dx*dx);
@@ -765,15 +739,11 @@ while timestep < totaltimestep
                     uy(px,py) = 0;
                 end
                 Vp_res = Vp_res-Vp_dep;
-                
             elseif U_loc > U_ero_sand && qs_loc < qs_cap
-                
-                
                 Vp_ero = Vp_sed*(U_loc^beta-U_ero_sand^beta)/U_ero_sand^beta;
                 Vp_ero = min(Vp_ero,(H(px,py)-eta(px,py))/4*(dx*dx));
                 
                 eta_change_loc = -Vp_ero/(dx*dx);
-                disp(Vp_sed)
                 eta(px,py) = eta(px,py)+eta_change_loc;
                 h(px,py) = H(px,py) - eta(px,py);
                 uw(px,py) = min(u_max,qw(px,py)/h(px,py));
@@ -822,9 +792,9 @@ while timestep < totaltimestep
         Vp_res = Vp_sed;
         
         itmax = 2*(L+W);
-%         if mod(np_sed,100) == 0
-%             np_sed
-%         end
+        if mod(np_sed,100) == 0
+            np_sed
+        end
         
         px = px_start;
         if VER_MATLAB == 0
@@ -857,7 +827,7 @@ while timestep < totaltimestep
                 % calculation
                 weight(k) = (max(0,qx(px,py)*dxn_ivec(dxn(k))+qy(px,py)*dxn_jvec(dxn(k))))^1.0*...
                     h(pxn,pyn)^theta_mud/dist;
-                if wet_flag(pxn,pyn) ~= 1
+                if h(pxn,pyn) < h_dry
                     weight(k) = 0; % doesn't allow dry nodes
                 end
                 if wall_flag(pxn,pyn) ~= 0
@@ -973,42 +943,40 @@ while timestep < totaltimestep
         end
     end
     
-%     % ============== apply subsidence
-%     if timestep > 1000
-%         eta = eta - sigma;
-%         h = H-eta;
-%         strata_new = strata;
-%         for i = 1:L
-%             for j = 1:W
-%                 zn = max(0,round((eta(i,j)-z0)/dz));
-%                 if zn < topz(i,j)
-%                     strata_new(i,j,zn+1:zmax) = strata0;
-%                     if zn > 0
-%                         strata_new(i,j,1:zn) = strata(i,j,topz(i,j)-(zn-1):topz(i,j));
-%                     end
-%                 end
-%                 topz(i,j) = zn;
-%             end
-%         end
-%         strata = strata_new;
-%     end
+    % ============== apply subsidence
+    if timestep > 500 
+        eta = eta - sigma;
+        h = max(0,H-eta);
+        strata_new = strata;
+        for i = 1:L
+            for j = 1:W
+                zn = max(1,round((eta(i,j)-z0)/dz));
+                if zn < topz(i,j)
+                    strata_new(i,j,zn+1:zmax) = strata0;
+                    strata_new(i,j,1:zn) = strata(i,j,topz(i,j)-(zn-1):topz(i,j));
+                end
+                topz(i,j) = zn;
+            end
+        end
+        strata = strata_new;
+    end
 
     %  flooding/dry-wet correction
     for i = 1:L
         for j = 1:W
-            if wet_flag(i,j) == 0 % locate dry nodes
+            if h(i,j) < h_dry % locate dry nodes
                 for k = 1:Nnbr(i,j)
                     dxn(k) = nbr(i,j,k);
                     inbr = i+dxn_iwalk(dxn(k));
                     jnbr = j+dxn_jwalk(dxn(k));
-                    if wet_flag(inbr,jnbr) == 1 && H(inbr,jnbr)>eta(i,j)
+                    if h(inbr,jnbr) >= h_dry && H(inbr,jnbr)>eta(i,j)
                         H(i,j) = H(inbr,jnbr);
                     end
                 end
             end
         end
     end
-    h = H-eta; % no need to update velocities because they are not used in the following updates
+    h = max(0,H-eta);  % no need to update velocities because they are not used in the following updates
        
     % upstream boundary condition - constant depth
     eta(px_start,py_start) = H(px_start,py_start)-h0;
@@ -1016,24 +984,19 @@ while timestep < totaltimestep
     H_SL = H_SL+SLR*dt;
     
     if mod(timestep,plotinterval) == 0
-        figure(timestep)
-        imagesc(eta)
-        colormap(jet)
-        axis equal
-        colorbar
-        title('bed elevation')
-        drawnow;
-%         handl = figure(2);
-%         saveas(handl,sprintf('figs/ETAIMG%d',plotnumber+timestep/plotinterval),'png')
-        
-%         clear data
-%         data.eta = eta;
-%         data.h = h;
-%         data.qw = qw;
-%         data.uw = uw;
-%         data.strata = strata;
-%         save(sprintf('data%d',plotnumber+timestep/plotinterval),'data')
+       
+        clear data
+        data.eta = eta;
+        data.h = h;
+        data.qw = qw;
+        data.ux = ux;
+        data.uy = uy;
+        data.strata = strata;
+        save(sprintf('subdata%d',plotnumber+timestep/plotinterval),'data')
     end
     
+    save snapshot
 end
 toc
+
+save finaldata
