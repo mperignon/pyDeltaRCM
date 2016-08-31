@@ -533,10 +533,6 @@ class Tools(object):
         Finish updating flow fields
         Clean up at end of water iteration
         '''
-
-        self.apply_subsidence(timestep)
-
-        self.flooding_correction()
         
         self.stage = np.maximum(self.stage, self.H_SL)
         self.depth = np.maximum(self.stage - self.eta, 0)
@@ -866,12 +862,14 @@ class Tools(object):
 
 
 
-    def finalize_sed_timestep(self):
+    def finalize_sed_timestep(self, timestep):
         '''
         Clean up after sediment routing
         Update sea level if baselevel changes
         '''
 
+        self.apply_subsidence(timestep)
+        
         self.flooding_correction()
         self.stage = np.maximum(self.stage, self.H_SL)
         self.depth = np.maximum(self.stage-self.eta, 0)
@@ -1246,7 +1244,7 @@ class Tools(object):
         self.one_coarse_timestep()
         self.one_fine_timestep()
 
-        self.finalize_sed_timestep()
+        self.finalize_sed_timestep(timestep)
 
 
 
