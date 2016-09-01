@@ -44,7 +44,8 @@ class deltaRCM(deltaRCM_base.Tools):
         'coeff__topographic_diffusion': {'name': 'alpha', 'type': 'float', 'default': 0.1},
         'basin__opt_subsidence': {'name':'toggle_subsidence', 'type': 'choice', 'default': False},
         'basin__maximum_subsidence_rate': {'name': 'sigma_max', 'type': 'float', 'default': 0.000825},
-        'basin__subsidence_start_timestep': {'name': 'start_subsidence', 'type': 'long', 'default': 0}
+        'basin__subsidence_start_timestep': {'name': 'start_subsidence', 'type': 'long', 'default': 0},
+        'basin__opt_stratigraphy': {'name': 'save_strata', 'type': 'choice', 'default': False}
         }
 
 
@@ -59,7 +60,16 @@ class deltaRCM(deltaRCM_base.Tools):
 
         for timestep in range(self.n_steps):
             self.run_one_timestep(timestep)
+            
+            self.apply_subsidence(timestep)
+            self.record_stratigraphy(timestep)
+            
+            self.finalize_timestep(timestep)
             self.output_data(timestep)
+        
+        
+        ##### finalize #####
+        self.output_strata()
 
 
 
@@ -84,12 +94,9 @@ class deltaRCM(deltaRCM_base.Tools):
         
         self.create_other_variables()
         self.create_domain()
+        
+        self.init_subsidence()
+        self.init_stratigraphy()
         self.init_output_grids()
-
-
-
-
-delta = deltaRCM()
-delta.update()
 
 

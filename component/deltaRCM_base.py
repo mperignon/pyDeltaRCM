@@ -991,7 +991,7 @@ class Tools(object):
 
             thetaloc = np.zeros((self.L, self.W))
             thetaloc[self.y > self.L0 - 1] = np.arctan((self.x[self.y > self.L0 - 1] - self.W / 2.) /
-                                             (self.y[self.y > self.L0 - 1] - self.L0))
+                                             (self.y[self.y > self.L0 - 1] - self.L0 + 1))
             
             self.subsidence_mask = ((R1 <= Rloc) & (Rloc <= R2) &
                                     (theta1 <= thetaloc) & (thetaloc <= theta2))
@@ -1149,13 +1149,13 @@ class Tools(object):
         
     def init_output_grids(self):
         '''
-        Creates a netCDF file to store grids with
-        default variables
+        Creates a netCDF file to store output grids
+        Fills with default variables
         
         Overwrites an existing netcdf file with the same name
         '''
         
-        if self.save_eta_grids or self.save_depth_grids or self.save_stage_grids:
+        if self.save_eta_grids or self.save_depth_grids or self.save_stage_grids or self.save_strata:
         
             if self.verbose: print 'Generating netCDF file for output grids...'
             
@@ -1181,6 +1181,8 @@ class Tools(object):
             length = self.output_netcdf.createDimension('length', self.L)
             width = self.output_netcdf.createDimension('width', self.W)
             total_time = self.output_netcdf.createDimension('total_time', None)
+            
+                
 
             x = self.output_netcdf.createVariable('x', np.float32, ('length','width'))
             y = self.output_netcdf.createVariable('y', np.float32, ('length','width'))
@@ -1192,18 +1194,29 @@ class Tools(object):
 
             x[:] = self.x
             y[:] = self.y
+            
                            
             if self.save_eta_grids:
-                eta = self.output_netcdf.createVariable('eta', np.float32, ('total_time','length','width'))
+                eta = self.output_netcdf.createVariable('eta',
+                                                        np.float32,
+                                                        ('total_time','length','width'))
                 eta.units = 'meters'
                            
+                    
             if self.save_stage_grids:
-                stage = self.output_netcdf.createVariable('stage', np.float32, ('total_time','length','width'))
+                stage = self.output_netcdf.createVariable('stage',
+                                                          np.float32,
+                                                          ('total_time','length','width'))
                 stage.units = 'meters'
                            
+                    
             if self.save_depth_grids:
-                depth = self.output_netcdf.createVariable('depth', np.float32, ('total_time','length','width'))
+                depth = self.output_netcdf.createVariable('depth',
+                                                          np.float32,
+                                                          ('total_time','length','width'))
                 depth.units = 'meters'
+                
+                
                 
             if self.verbose: print 'Output netCDF file created.'
 
@@ -1323,6 +1336,9 @@ class Tools(object):
         
 
     def output_data(self, timestep):
+        '''
+        Plots and saves figures of eta, depth, and stage
+        '''
 
         if int(timestep+1) % self.save_dt == 0:
             
@@ -1358,4 +1374,63 @@ class Tools(object):
             if self.save_stage_grids:
                 if self.verbose: print 'Saving grid: stage'
                 self.save_grids('stage', self.stage, timestep+1)                
-                
+    
+    
+    
+    
+    def output_strata(self):
+        '''
+        Saves the stratigraphy sparse matrices into output netcdf file
+        '''
+        
+        if self.save_strata:
+        
+            if self.verbose:
+                print '\nSaving final stratigraphy data to netCDF files...'
+           
+               
+            shape = self.strata_eta.shape
+           
+            total_strata_age = self.output_netcdf.createDimension('total_strata_age', shape[1])
+            
+
+            strata_age = self.output_netcdf.createVariable('strata_age',
+                                                            np.int32,
+                                                            ('total_strata_age'))
+            strata_age.units = 'timesteps'
+            self.output_netcdf['strata_age'][:] = range(shape[1]-1, -1, -1)
+
+
+            sand_frac = self.output_netcdf.createVariable('strata_sand_frac',
+                                                          np.float32,
+                                                          ('total_strata_age','length','width'))
+            sand_frac.units = 'fraction'
+
+
+            strata_elev = self.output_netcdf.createVariable('strata_depth',
+                                                          np.float32,
+                                                          ('total_strata_age','length','width'))
+            strata_elev.units = 'meters'
+
+
+
+            for i in range(shape[1]):
+
+                sf = self.strata_sand_frac[:,i].toarray().reshape(self.eta.shape)
+                sf[sf == 0] = -1
+
+                self.output_netcdf['strata_sand_frac'][i,:,:] = sf
+
+                sz = self.strata_eta[:,i].toarray().reshape(self.eta.shape)
+                sz[sz == 0] = self.init_eta[sz == 0]
+
+                self.output_netcdf['strata_depth'][i,:,:] = sz
+
+
+            if self.verbose:
+                print 'Stratigraphy data saved.'
+        
+        
+        
+        
+        
