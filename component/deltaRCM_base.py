@@ -6,7 +6,7 @@ from scipy import ndimage
 import sys, os, re, string
 from netCDF4 import Dataset
 import time as time_lib
-
+from scipy.sparse import lil_matrix, csc_matrix
 
 class Tools(object):
 
@@ -370,20 +370,6 @@ class Tools(object):
     #############################################
     ################# updaters ##################
     #############################################
-    
-    
-    def apply_subsidence(self, timestep):
-        '''
-        Apply subsidence to domain if
-        toggle_subsidence is True and
-        start_subsidence is <= timestep
-        '''
-        
-        if self.toggle_subsidence:
-        
-            if self.start_subsidence <= timestep:
-            
-                self.eta = self.eta - self.sigma
                 
                 
     
@@ -862,13 +848,11 @@ class Tools(object):
 
 
 
-    def finalize_sed_timestep(self, timestep):
+    def finalize_timestep(self, timestep):
         '''
         Clean up after sediment routing
         Update sea level if baselevel changes
         '''
-
-        self.apply_subsidence(timestep)
         
         self.flooding_correction()
         self.stage = np.maximum(self.stage, self.H_SL)
@@ -1003,14 +987,16 @@ class Tools(object):
             R1 = 0.3 * self.L; R2 = 1. * self.L     # radial limits (fractions of L)
             theta1 = -pi/3; theta2 =  pi/3.         # angular limits
             
-            Rloc = np.sqrt((self.y - 3)**2 + (self.x - self.W / 2.)**2)
-            
+            Rloc = np.sqrt((self.y - self.L0)**2 + (self.x - self.W / 2.)**2)
+
             thetaloc = np.zeros((self.L, self.W))
-            thetaloc[self.y > 3] = np.arctan((self.x[self.y > 3] - self.W / 2.) /
-                                             (self.y[self.y > 3] - 3))
+            thetaloc[self.y > self.L0 - 1] = np.arctan((self.x[self.y > self.L0 - 1] - self.W / 2.) /
+                                             (self.y[self.y > self.L0 - 1] - self.L0))
             
             self.subsidence_mask = ((R1 <= Rloc) & (Rloc <= R2) &
                                     (theta1 <= thetaloc) & (thetaloc <= theta2))
+            
+            self.subsidence_mask[:self.L0,:] = False
             
             self.sigma = self.subsidence_mask * self.sigma_max
 
@@ -1146,10 +1132,20 @@ class Tools(object):
         self.inlet = list(np.unique(np.where(self.cell_type == 1)[1]))
         self.eta = self.stage - self.depth
         
-        # initialize subsidence patterns
-        self.init_subsidence()
+    
+    
+    def init_stratigraphy(self):
+        '''
+        Creates sparse array to store stratigraphy data
+        '''
         
+        if self.save_strata:
+            self.strata_sand_frac = lil_matrix((self.L * self.W, self.n_steps), dtype=np.float32)
+            
+            self.init_eta = self.eta.copy()
+            self.strata_eta = lil_matrix((self.L * self.W, self.n_steps), dtype=np.float32)
 
+            
         
     def init_output_grids(self):
         '''
@@ -1244,9 +1240,87 @@ class Tools(object):
         self.one_coarse_timestep()
         self.one_fine_timestep()
 
-        self.finalize_sed_timestep(timestep)
+        
 
+        
+        
+    def record_stratigraphy(self, timestep):
+        '''
+        Saves the sand fraction of deposited sediment
+        into a sparse array created by init_stratigraphy().
+        
+        Only runs if save_strata is True
+        '''
+        
+        if self.save_strata:
+            
+            if self.verbose:
+                print 'Storing stratigraphy data'
+                
+            ################### sand frac ###################
+            # -1 for cells with deposition volumes < vol_limit
+            # vol_limit for any mud (to diff from no deposition in sparse array)
+            # (overwritten if any sand deposited)
+            
+            sand_frac = -1 * np.ones((self.L, self.W))
 
+            vol_limit = 0.000001 # threshold deposition volume
+            sand_frac[self.Vp_dep_mud > vol_limit] = vol_limit
+
+            sand_loc = self.Vp_dep_sand > 0
+            sand_frac[sand_loc] = (self.Vp_dep_sand[sand_loc] /
+                                  (self.Vp_dep_mud[sand_loc] + self.Vp_dep_sand[sand_loc]))
+
+            # store indices and sand_frac into a sparse array
+            row_s = np.where(sand_frac.flatten() >= 0)[0]
+            col_s = np.zeros((len(row_s),))
+            data_s = sand_frac[sand_frac >= 0]
+
+            sand_sparse = csc_matrix((data_s, (row_s, col_s)), shape=(self.L * self.W, 1))
+
+            # store sand_sparse into strata_sand_frac
+            self.strata_sand_frac[:,timestep] = sand_sparse
+            
+            
+            ################### eta ###################
+            
+            diff_eta = self.eta - self.init_eta
+            
+            row_s = np.where(diff_eta.flatten() != 0)[0]
+            col_s = np.zeros((len(row_s),))
+            data_s = self.eta[diff_eta != 0]
+           
+            eta_sparse = csc_matrix((data_s, (row_s, col_s)), shape=(self.L * self.W, 1))
+            
+            self.strata_eta[:,timestep] = eta_sparse
+            
+            if self.toggle_subsidence:
+             
+                sigma_change = self.strata_eta[:,:timestep] - self.sigma.flatten()[:,np.newaxis]
+                self.strata_eta[:,:timestep] = lil_matrix(self.strata_eta[:,:timestep])
+            
+        
+        
+        
+        
+        
+    def apply_subsidence(self, timestep):
+        '''
+        Apply subsidence to domain if
+        toggle_subsidence is True and
+        start_subsidence is <= timestep
+        '''
+        
+        if self.toggle_subsidence:
+        
+            if self.start_subsidence <= timestep:
+                
+                if self.verbose:
+                    print 'Applying subsidence'
+            
+                self.eta = self.eta - self.sigma
+                
+        
 
     def output_data(self, timestep):
 

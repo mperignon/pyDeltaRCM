@@ -93,7 +93,12 @@ Save grids of computed depth? (Yes/No)
     model_output__opt_depth_grids: No
 
 Time interval for saving plots and grids (number of timesteps)
-    model_output__opt_time_interval: 2                                            
+    model_output__opt_time_interval: 2     
+
+-------------------------------------------------------------  
+
+Save basin stratigraphy? (Yes/No)
+    basin__opt_stratigraphy: Yes                                    
                                             
                                             
                                             
