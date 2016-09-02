@@ -1061,6 +1061,11 @@ class Tools(object):
     
         # self.prefix
         self.prefix = self.out_dir
+        
+        if self.out_dir[-1] is not '/':
+            self.prefix = self.out_dir + '/'
+        
+        
         if self.site_prefix:
             self.prefix += self.site_prefix + '_'
         if self.case_prefix:
@@ -1159,7 +1164,7 @@ class Tools(object):
         
             if self.verbose: print 'Generating netCDF file for output grids...'
             
-            directory = self.prefix
+            directory = self.out_dir
             filename = 'pyDeltaRCM_output.nc'
 
             if not os.path.exists(directory):
